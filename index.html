@@ -1,0 +1,279 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0f766e">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg">
+<title>Duka POS</title>
+<style>
+  :root{--g:#0f766e;--gd:#0b524c;--bg:#f3f4f6;--card:#fff;--tx:#111827;--mu:#6b7280;--red:#b91c1c;--amb:#b45309}
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--tx);padding-bottom:calc(env(safe-area-inset-bottom) + 70px)}
+  header{background:var(--g);color:#fff;padding:12px 14px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:5}
+  header h1{font-size:17px;margin:0}
+  #st{font-size:12px;background:rgba(255,255,255,.18);padding:4px 9px;border-radius:99px;white-space:nowrap}
+  nav{display:flex;background:#fff;position:sticky;top:46px;z-index:4;border-bottom:1px solid #e5e7eb}
+  nav button{flex:1;padding:12px 0;border:0;background:none;font-size:15px;font-weight:600;color:var(--mu);border-bottom:3px solid transparent}
+  nav button.on{color:var(--g);border-color:var(--g)}
+  main{padding:12px}
+  input,select{width:100%;padding:12px;font-size:16px;border:1px solid #d1d5db;border-radius:10px;background:#fff}
+  .chips{display:flex;gap:8px;overflow-x:auto;padding:10px 0}
+  .chip{padding:7px 13px;border-radius:99px;border:1px solid #d1d5db;background:#fff;font-size:14px;white-space:nowrap}
+  .chip.on{background:var(--g);color:#fff;border-color:var(--g)}
+  .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+  .item{background:var(--card);border:0;border-radius:12px;padding:12px;text-align:left;box-shadow:0 1px 2px rgba(0,0,0,.08);min-height:84px}
+  .item:active{transform:scale(.97);background:#ecfdf5}
+  .item b{display:block;font-size:15px;line-height:1.2}
+  .item .p{color:var(--g);font-weight:700;margin-top:6px;display:block}
+  .item .s{font-size:12px;color:var(--mu)}
+  .item .s.low{color:var(--amb);font-weight:700}
+  .item .s.out{color:var(--red);font-weight:700}
+  #cart{position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1px solid #e5e7eb;padding:10px 12px calc(env(safe-area-inset-bottom) + 10px);box-shadow:0 -4px 12px rgba(0,0,0,.08);z-index:6}
+  .line{display:flex;align-items:center;gap:8px;padding:5px 0;font-size:15px}
+  .line span.n{flex:1}
+  .q{width:34px;height:34px;border-radius:8px;border:1px solid #d1d5db;background:#fff;font-size:20px;line-height:1}
+  .row{display:flex;gap:8px;align-items:center;margin-top:8px}
+  .pay{flex:1;padding:11px 0;border-radius:10px;border:2px solid #d1d5db;background:#fff;font-weight:700;font-size:15px}
+  .pay.on{border-color:var(--g);background:#ecfdf5;color:var(--gd)}
+  .go{flex:1.4;padding:13px;border:0;border-radius:10px;background:var(--g);color:#fff;font-size:16px;font-weight:700}
+  .go:disabled{background:#9ca3af}
+  .total{font-size:20px;font-weight:800}
+  .card{background:#fff;border-radius:12px;padding:14px;margin-bottom:10px;box-shadow:0 1px 2px rgba(0,0,0,.08)}
+  .big{font-size:26px;font-weight:800;color:var(--g)}
+  .kv{display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #f3f4f6}
+  .kv:last-child{border:0}
+  label{display:block;font-size:13px;color:var(--mu);margin:10px 0 4px}
+  .mu{color:var(--mu);font-size:13px}
+  .toast{position:fixed;top:60px;left:50%;transform:translateX(-50%);background:#111827;color:#fff;padding:10px 16px;border-radius:99px;font-size:14px;z-index:20}
+  .setup{padding:24px;text-align:center}
+</style>
+</head>
+<body>
+<header><h1 id="shop">Duka POS</h1><span id="st">…</span></header>
+<nav id="nav">
+  <button data-t="sell" class="on">Sell</button>
+  <button data-t="stock">Receive stock</button>
+  <button data-t="today">Today</button>
+</nav>
+<main id="main"></main>
+<div id="cart" style="display:none"></div>
+
+<script>
+/* ---------- config from the shop link: index.html?api=...&k=... ---------- */
+var P = new URLSearchParams(location.search);
+if (P.get('api')) {
+  localStorage.setItem('api', P.get('api'));
+  localStorage.setItem('k', P.get('k') || '');
+  history.replaceState({}, '', location.pathname);
+}
+var API = localStorage.getItem('api'), KEY = localStorage.getItem('k') || '';
+
+/* ---------- tiny IndexedDB wrapper ---------- */
+var dbp = new Promise(function (res, rej) {
+  var r = indexedDB.open('duka', 1);
+  r.onupgradeneeded = function () {
+    r.result.createObjectStore('sales', { keyPath: 'id' });
+    r.result.createObjectStore('receipts', { keyPath: 'id' });
+  };
+  r.onsuccess = function () { res(r.result); };
+  r.onerror = function () { rej(r.error); };
+});
+function tx(store, mode, fn) {
+  return dbp.then(function (d) {
+    return new Promise(function (res, rej) {
+      var t = d.transaction(store, mode), rq = fn(t.objectStore(store));
+      t.oncomplete = function () { res(rq && rq.result); };
+      t.onerror = function () { rej(t.error); };
+    });
+  });
+}
+var put = function (s, o) { return tx(s, 'readwrite', function (st) { return st.put(o); }); };
+var all = function (s) { return tx(s, 'readonly', function (st) { return st.getAll(); }); };
+
+/* ---------- state ---------- */
+var items = [], shop = 'Duka POS', cart = {}, pay = 'Cash', cat = 'All', q = '', tab = 'sell';
+var localSales = [], localRec = [], syncing = false, lastSync = null, syncErr = false;
+try { var c = JSON.parse(localStorage.getItem('items') || 'null'); if (c) { items = c.items; shop = c.shop; } } catch (e) {}
+
+var uid = function () { return (crypto.randomUUID ? crypto.randomUUID() : Date.now() + '-' + Math.random().toString(16).slice(2)); };
+var kes = function (n) { return 'KES ' + Math.round(n).toLocaleString('en-KE'); };
+var esc = function (s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
+var $ = function (id) { return document.getElementById(id); };
+
+function toast(msg) {
+  var d = document.createElement('div'); d.className = 'toast'; d.textContent = msg;
+  document.body.appendChild(d); setTimeout(function () { d.remove(); }, 1600);
+}
+
+/* stock as shown = last known sheet stock, adjusted for what is not yet synced */
+function stockOf(it) {
+  var s = it.stock;
+  localSales.forEach(function (x) { if (!x.synced && x.code === it.code) s -= x.qty; });
+  localRec.forEach(function (x) { if (!x.synced && x.code === it.code) s += x.qty; });
+  return s;
+}
+
+async function refreshLocal() {
+  localSales = await all('sales'); localRec = await all('receipts'); render();
+}
+
+/* ---------- sync ---------- */
+async function loadItems() {
+  var r = await fetch(API + '?token=' + encodeURIComponent(KEY));
+  var j = await r.json();
+  if (!j.ok) throw new Error(j.error || 'load failed');
+  items = j.items; shop = j.shop;
+  localStorage.setItem('items', JSON.stringify({ items: items, shop: shop }));
+}
+
+async function sync() {
+  if (syncing || !API || !navigator.onLine) { renderStatus(); return; }
+  syncing = true; renderStatus();
+  try {
+    var sales = (await all('sales')).filter(function (x) { return !x.synced; });
+    var rec = (await all('receipts')).filter(function (x) { return !x.synced; });
+    if (sales.length || rec.length) {
+      var r = await fetch(API, { method: 'POST', headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify({ token: KEY, sales: sales, receipts: rec }) });
+      var j = await r.json();
+      if (!j.ok) throw new Error(j.error || 'sync failed');
+      for (var s of sales) if (j.sales.indexOf(s.id) > -1) await put('sales', Object.assign({}, s, { synced: 1 }));
+      for (var x of rec) if (j.receipts.indexOf(x.id) > -1) await put('receipts', Object.assign({}, x, { synced: 1 }));
+    }
+    await loadItems();
+    lastSync = new Date(); syncErr = false;
+  } catch (e) { syncErr = true; }
+  syncing = false;
+  await refreshLocal();
+}
+
+function unsyncedCount() {
+  return localSales.filter(function (x) { return !x.synced; }).length + localRec.filter(function (x) { return !x.synced; }).length;
+}
+
+function renderStatus() {
+  var n = unsyncedCount(), el = $('st');
+  if (syncing) el.textContent = 'Syncing…';
+  else if (!navigator.onLine) el.textContent = 'Offline' + (n ? ' · ' + n + ' waiting' : '');
+  else if (syncErr) el.textContent = 'Sync problem' + (n ? ' · ' + n + ' waiting' : '');
+  else el.textContent = n ? n + ' waiting' : '✓ Synced';
+  $('shop').textContent = shop;
+}
+
+/* ---------- actions ---------- */
+function addToCart(code) {
+  var it = items.find(function (i) { return i.code === code; });
+  cart[code] = (cart[code] || 0) + 1;
+  if (it && cart[code] > stockOf(it) && stockOf(it) <= 0) toast('Note: stock shows 0');
+  render();
+}
+function chg(code, d) { cart[code] = (cart[code] || 0) + d; if (cart[code] <= 0) delete cart[code]; render(); }
+
+async function completeSale() {
+  var ts = new Date().toISOString(), codes = Object.keys(cart);
+  for (var code of codes) {
+    var it = items.find(function (i) { return i.code === code; });
+    await put('sales', { id: uid(), ts: ts, code: code, name: it.name, qty: cart[code], price: it.price, payment: pay });
+  }
+  cart = {}; toast('Sale saved'); await refreshLocal(); sync();
+}
+
+async function saveReceipt() {
+  var code = $('rc').value, qty = Number($('rq').value), cost = Number($('rp').value);
+  if (!code || !(qty > 0) || !(cost >= 0) || $('rp').value === '') { toast('Fill in item, quantity and cost'); return; }
+  var it = items.find(function (i) { return i.code === code; });
+  await put('receipts', { id: uid(), ts: new Date().toISOString(), code: code, name: it.name, qty: qty, cost: cost });
+  toast('Stock received'); $('rq').value = ''; $('rp').value = ''; await refreshLocal(); sync();
+}
+
+/* ---------- views ---------- */
+function render() {
+  renderStatus();
+  document.querySelectorAll('#nav button').forEach(function (b) { b.classList.toggle('on', b.dataset.t === tab); });
+  if (!API) { $('main').innerHTML = '<div class="setup"><h2>Shop link needed</h2><p class="mu">Open the link your supplier sent you (it ends with ?api=…) once, then add the app to your home screen.</p></div>'; $('cart').style.display = 'none'; return; }
+  if (tab === 'sell') viewSell(); else if (tab === 'stock') viewStock(); else viewToday();
+  renderCart();
+}
+
+function viewSell() {
+  var cats = ['All'].concat(items.map(function (i) { return i.category; }).filter(function (v, i, a) { return a.indexOf(v) === i; }));
+  var list = items.filter(function (i) {
+    return (cat === 'All' || i.category === cat) && (!q || (i.name + ' ' + i.code).toLowerCase().indexOf(q.toLowerCase()) > -1);
+  });
+  var html = '<input id="q" type="search" placeholder="Search item or code" value="' + esc(q) + '">' +
+    '<div class="chips">' + cats.map(function (c) { return '<button class="chip' + (c === cat ? ' on' : '') + '" data-cat="' + esc(c) + '">' + esc(c) + '</button>'; }).join('') + '</div>' +
+    '<div class="grid">' + list.map(function (i) {
+      var s = stockOf(i), cls = s <= 0 ? 'out' : (s <= i.reorder ? 'low' : '');
+      return '<button class="item" data-code="' + esc(i.code) + '"><b>' + esc(i.name) + '</b><span class="p">' + kes(i.price) + '</span><span class="s ' + cls + '">' + s + ' in stock</span></button>';
+    }).join('') + '</div>' + (items.length ? '' : '<p class="mu">No items yet. Connect to the internet once to load the item list.</p>');
+  var focus = document.activeElement && document.activeElement.id === 'q';
+  $('main').innerHTML = html;
+  if (focus) { var e = $('q'); e.focus(); e.setSelectionRange(q.length, q.length); }
+}
+
+function renderCart() {
+  var el = $('cart'), codes = Object.keys(cart);
+  if (tab !== 'sell' || !codes.length) { el.style.display = 'none'; return; }
+  var total = 0;
+  var lines = codes.map(function (code) {
+    var it = items.find(function (i) { return i.code === code; }); total += it.price * cart[code];
+    return '<div class="line"><span class="n">' + esc(it.name) + '</span><button class="q" data-d="-1" data-c="' + esc(code) + '">−</button><b>' + cart[code] + '</b><button class="q" data-d="1" data-c="' + esc(code) + '">+</button><span style="width:78px;text-align:right">' + kes(it.price * cart[code]) + '</span></div>';
+  }).join('');
+  el.style.display = 'block';
+  el.innerHTML = lines + '<div class="row"><button class="pay' + (pay === 'Cash' ? ' on' : '') + '" data-pay="Cash">Cash</button><button class="pay' + (pay === 'M-Pesa' ? ' on' : '') + '" data-pay="M-Pesa">M-Pesa</button></div>' +
+    '<div class="row"><span class="total">' + kes(total) + '</span><button class="go" id="done">Complete sale</button></div>';
+}
+
+function viewStock() {
+  var opts = items.map(function (i) { return '<option value="' + esc(i.code) + '">' + esc(i.name) + ' (' + stockOf(i) + ' in stock)</option>'; }).join('');
+  var recent = localRec.slice().sort(function (a, b) { return b.ts.localeCompare(a.ts); }).slice(0, 5);
+  $('main').innerHTML = '<div class="card"><h3 style="margin-top:0">Receive stock</h3>' +
+    '<label>Item</label><select id="rc">' + opts + '</select>' +
+    '<label>Quantity received</label><input id="rq" type="number" inputmode="numeric" min="1">' +
+    '<label>Buying cost per unit (KES)</label><input id="rp" type="number" inputmode="decimal" min="0">' +
+    '<div class="row"><button class="go" id="saveRec">Save</button></div></div>' +
+    (recent.length ? '<div class="card"><b>Recent</b>' + recent.map(function (r) { return '<div class="kv"><span>' + esc(r.name) + ' × ' + r.qty + '</span><span class="mu">' + (r.synced ? 'synced' : 'waiting') + '</span></div>'; }).join('') + '</div>' : '');
+}
+
+function viewToday() {
+  var start = new Date(); start.setHours(0, 0, 0, 0);
+  var cost = {}; items.forEach(function (i) { cost[i.code] = i.cost; });
+  var t = localSales.filter(function (s) { return new Date(s.ts) >= start; });
+  var tot = 0, prof = 0, by = { 'Cash': 0, 'M-Pesa': 0 }, units = {};
+  t.forEach(function (s) {
+    var v = s.qty * s.price; tot += v; prof += (s.price - (cost[s.code] || 0)) * s.qty;
+    by[s.payment] = (by[s.payment] || 0) + v; units[s.name] = (units[s.name] || 0) + s.qty;
+  });
+  var top = Object.keys(units).sort(function (a, b) { return units[b] - units[a]; }).slice(0, 5);
+  var low = items.filter(function (i) { return stockOf(i) <= i.reorder; });
+  $('main').innerHTML = '<div class="card"><div class="mu">Sales today</div><div class="big">' + kes(tot) + '</div><div class="mu">Profit ≈ ' + kes(prof) + '</div></div>' +
+    '<div class="card"><b>By payment</b>' + Object.keys(by).map(function (k) { return '<div class="kv"><span>' + esc(k) + '</span><b>' + kes(by[k]) + '</b></div>'; }).join('') + '</div>' +
+    '<div class="card"><b>Top sellers</b>' + (top.length ? top.map(function (n) { return '<div class="kv"><span>' + esc(n) + '</span><b>' + units[n] + '</b></div>'; }).join('') : '<div class="mu">No sales yet today</div>') + '</div>' +
+    '<div class="card"><b>Running low</b>' + (low.length ? low.map(function (i) { return '<div class="kv"><span>' + esc(i.name) + '</span><b>' + stockOf(i) + '</b></div>'; }).join('') : '<div class="mu">Nothing</div>') + '</div>' +
+    '<p class="mu" style="text-align:center">' + (lastSync ? 'Last synced ' + lastSync.toLocaleTimeString('en-KE', { hour: '2-digit', minute: '2-digit' }) : 'Not synced yet this session') + '</p>';
+}
+
+/* ---------- events ---------- */
+document.addEventListener('click', function (e) {
+  var b = e.target.closest('button'); if (!b) return;
+  if (b.dataset.t) { tab = b.dataset.t; render(); }
+  else if (b.dataset.code) addToCart(b.dataset.code);
+  else if (b.dataset.cat !== undefined) { cat = b.dataset.cat; render(); }
+  else if (b.dataset.d) chg(b.dataset.c, Number(b.dataset.d));
+  else if (b.dataset.pay) { pay = b.dataset.pay; renderCart(); }
+  else if (b.id === 'done') completeSale();
+  else if (b.id === 'saveRec') saveReceipt();
+});
+document.addEventListener('input', function (e) { if (e.target.id === 'q') { q = e.target.value; viewSell(); } });
+window.addEventListener('online', sync);
+window.addEventListener('offline', renderStatus);
+document.addEventListener('visibilitychange', function () { if (!document.hidden) sync(); });
+setInterval(sync, 30000);
+
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
+refreshLocal().then(sync);
+</script>
+</body>
+</html>
