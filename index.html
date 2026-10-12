@@ -83,13 +83,58 @@
   .res{border:1px solid var(--line);border-radius:12px;margin-top:6px;overflow:hidden}
   .res button{display:flex;justify-content:space-between;width:100%;padding:11px 12px;border:0;border-bottom:1px solid var(--line);background:#fff;font-size:15px;text-align:left;color:var(--tx)}
   .res button:last-child{border:0}
+  .invrow{display:flex;justify-content:space-between;gap:10px;align-items:center;width:100%;text-align:left;background:#fff;border:1px solid var(--line);border-radius:14px;padding:12px;margin-bottom:8px;color:var(--tx);font-size:15px}
+  .pill.Paid{background:var(--gl);color:var(--gd)}.pill.Overdue{background:#fde8e6;color:var(--red)}.pill.Part{background:var(--amb-l);color:var(--amb)}.pill.Unpaid{background:#e8f0ff;color:#1d4ed8}
+  .doc{color:#111;font-size:14px;line-height:1.35}
+  .doc .dh{display:flex;justify-content:space-between;border-bottom:2px solid #111;padding-bottom:8px;margin-bottom:8px}
+  .doc .dn{font-size:18px;font-weight:800}
+  .doc .dt{font-size:16px;font-weight:800;letter-spacing:.06em;margin:6px 0}
+  .doc table{width:100%;border-collapse:collapse;margin:6px 0}
+  .doc th{font-size:12px;text-align:left;color:#555;border-bottom:1px solid #999;padding:5px 4px}
+  .doc td{padding:5px 4px;border-bottom:1px solid #e5e5e5;vertical-align:top}
+  .doc .r{text-align:right;white-space:nowrap}
+  .doc table.meta td{border:0}
+  .doc table.tot{width:100%}.doc table.tot tr.g td{font-weight:800;border-top:1px solid #111}
+  .doc .note,.doc .terms{font-size:12px;color:#444}.doc .foot{text-align:center;color:#555;margin-top:14px}
+  .doc.rcpt{max-width:300px;margin:0 auto}
+  #printArea{display:none}
+  @media print{
+    body{background:#fff;padding:0}
+    body>*:not(#printArea){display:none!important}
+    #printArea{display:block!important;padding:12px}
+  }
+  nav button{display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 14px 7px;font-size:12px}
+  nav button svg{display:block}
+  .kpis{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0}
+  .kpi{border:1px solid var(--line);border-radius:14px;padding:10px 12px;background:#fff}
+  .kpi .l{font-size:12px;color:var(--mu)}.kpi .v{font-size:19px;font-weight:800;margin-top:2px;letter-spacing:-.01em}.kpi .d{font-size:12px;margin-top:3px}
+  .kpi.pos .v{color:var(--g)}.kpi.neg .v{color:var(--red)}
+  .up{color:#0f766e;font-weight:700}.down{color:var(--red);font-weight:700}
+  .seg{display:flex;height:14px;border-radius:99px;overflow:hidden;background:#eef2f1;margin:8px 0 6px}.seg i{display:block;height:100%}
+  .legend{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:12px;color:#444;margin-bottom:6px}.legend b{display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:4px}
+  .hb{margin:8px 0}.hb .t{display:flex;justify-content:space-between;gap:8px;font-size:13px}.hb .b{height:8px;border-radius:99px;background:#eef2f1;margin-top:3px;overflow:hidden}.hb .b i{display:block;height:100%;background:var(--g);border-radius:99px}
+  .cols{display:flex;align-items:flex-end;gap:6px;height:96px;margin:8px 0 6px}.cols>div{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;height:100%}
+  .cols i{display:block;width:100%;background:linear-gradient(180deg,var(--g),var(--gd));border-radius:6px 6px 2px 2px;min-height:2px}.cols span{font-size:10px;color:var(--mu);margin-top:3px}
+  .lock{text-align:center;padding:22px 14px}.lock .lk{font-size:30px}
+  #banner:empty{display:none}.bn{display:flex;justify-content:space-between;align-items:center;gap:8px;background:var(--amb-l);color:#7a3d00;border-bottom:1px solid #f1d58a;padding:8px 12px;font-size:13px}
+  .plan.cur{border:2px solid var(--g)}.plan .ph{display:flex;justify-content:space-between;align-items:baseline;gap:8px}.plan ul{margin:6px 0 12px;padding-left:18px;font-size:14px;line-height:1.5}
+  .card{box-shadow:0 1px 2px rgba(15,31,29,.04)}
+  .repcard{padding:12px}
+  .doc .band{background:var(--gd);color:#fff;border-radius:10px;padding:10px 12px;margin:6px 0 8px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .doc .band .bt{font-size:16px;font-weight:800;letter-spacing:.03em;text-transform:uppercase}.doc .band .bs{font-size:12px;opacity:.9;margin-top:2px}
+  .doc .sec{font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#555;margin:14px 0 4px}
+  .doc .kpis{margin:8px 0}.doc .kpi{break-inside:avoid}
+  .doc .seg i,.doc .hb .b i,.doc .legend b{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .scan{position:fixed;inset:0;background:#000;z-index:30;display:flex;flex-direction:column}.scan video{flex:1;width:100%;object-fit:cover}.scanbar{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:12px;background:#111;color:#fff}
 </style>
 </head>
 <body>
 <header><h1 id="shop">Duka POS<small id="who"></small></h1><span id="st">…</span></header>
 <nav id="nav"></nav>
+<div id="banner"></div>
 <main id="main"></main>
 <div id="cart" style="display:none"></div>
+<div id="printArea"></div>
 
 <script>
 /* ---------- shop link: index.html?api=...&k=... (remembered on this phone) ---------- */
@@ -257,6 +302,8 @@ async function completeSale() {
     await put('sales', { id: uid(), ts: ts, code: code, name: it.name, qty: cart[code], price: it.price, payment: pay,
                          customer: pay === 'Credit' ? cust.trim() : '', phone: pay === 'Credit' ? custPhone.trim() : '' });
   }
+  lastSale = { ts: ts, total: cartTotal(), pay: pay, cust: pay === 'Credit' ? cust.trim() : '',
+    lines: codes.map(function (c) { var i = itemBy(c); return { name: i.name, qty: cart[c], price: i.price }; }) };
   cart = {}; cust = ''; custPhone = ''; pay = 'Cash'; given = '';
   toast('Sale saved'); await refreshLocal(true); sync();
 }
@@ -320,7 +367,7 @@ async function onlineAction(obj, okMsg) {
   } catch (e) { toast('Could not reach the server'); return null; }
 }
 async function saveItemForm() {
-  var body = { action: 'saveItem', name: F.iName.trim(), category: F.iCat.trim() || 'General', price: Number(F.iPrice), reorder: Number(F.iReorder) || 0 };
+  var body = { action: 'saveItem', name: F.iName.trim(), category: F.iCat.trim() || 'General', price: Number(F.iPrice), reorder: Number(F.iReorder) || 0, barcode: (F.iBar || '').trim() };
   if (!body.name) { toast('Type the item name'); return; }
   if (F.iPrice === '' || !(body.price >= 0)) { toast('Type the selling price'); return; }
   if (editCode) body.code = editCode; else { body.cost = Number(F.iCost) || 0; body.opening = Number(F.iOpen) || 0; }
@@ -329,7 +376,7 @@ async function saveItemForm() {
 }
 function openEdit(code) {
   var it = itemBy(code); if (!it) return;
-  editCode = code; newItemOpen = false;
+  editCode = code; newItemOpen = false; F.iBar = it.barcode || '';
   F.iName = it.name; F.iCat = it.category; F.iPrice = String(it.price); F.iReorder = String(it.reorder);
   render(true);
 }
@@ -464,9 +511,11 @@ function todayNums() {
 /* ---------- screens ---------- */
 function tabs() {
   if (!v2()) return [['sell', 'Sell'], ['stock', 'Receive stock'], ['today', 'Today']];
-  if (S.role !== 'owner') return [['sell', 'Sell'], ['credit', 'Credit'], ['today', 'Today']];
+  if (S.role !== 'owner') return isService() ? [['inv', 'Invoices'], ['owed', 'Owed']] : [['sell', 'Sell'], ['credit', 'Credit'], ['today', 'Today']];
   if (!v3()) return [['sell', 'Sell'], ['stock', 'Stock'], ['credit', 'Credit'], ['today', 'Today'], ['more', 'Team']];
-  return [['sell', 'Sell'], ['stock', 'Stock'], ['credit', 'Credit'], ['order', 'Order'], ['today', 'Today'], ['more', 'More']];
+  if (!v4()) return [['sell', 'Sell'], ['stock', 'Stock'], ['credit', 'Credit'], ['order', 'Order'], ['today', 'Today'], ['more', 'More']];
+  if (isService()) return [['inv', 'Invoices'], ['owed', 'Owed'], ['today', 'Today'], ['report', 'Reports'], ['more', 'More']];
+  return [['sell', 'Sell'], ['stock', 'Stock'], ['credit', 'Credit'], ['order', 'Order'], ['today', 'Today'], ['report', 'Reports'], ['more', 'More']];
 }
 
 function userIsTyping() {
@@ -478,19 +527,21 @@ function render(force) {
   renderStatus();
   if (!force && userIsTyping()) return;     // never wipe what someone is typing
   var ts = tabs();
-  if (!ts.some(function (t) { return t[0] === tab; })) tab = 'sell';
+  if (!ts.some(function (t) { return t[0] === tab; })) tab = ts[0][0];
   var alerts = v3() && isOwner() ? (S.expiry || []).filter(function (x) { return x.days <= 30; }).length : 0;
   var recv = v3() && isOwner() ? ((S.orders || []).filter(function (o) { return o.status === 'Delivered' && (S.receivedRefs || []).indexOf(o.id) < 0 && !L.receipts.some(function (r) { return r.ref === o.id; }); }).length) : 0;
   $('nav').innerHTML = ts.map(function (t) {
     var b = (t[0] === 'stock' && alerts ? alerts : 0) + (t[0] === 'order' ? recv : 0);
-    return '<button data-t="' + t[0] + '" class="' + (t[0] === tab ? 'on' : '') + '">' + t[1] + (b ? '<span class="badge">' + b + '</span>' : '') + '</button>';
+    return '<button data-t="' + t[0] + '" class="' + (t[0] === tab ? 'on' : '') + '">' + icon(t[0]) + '<span class="nl">' + t[1] + (b ? '<span class="badge">' + b + '</span>' : '') + '</span></button>';
   }).join('');
+  $('banner').innerHTML = planBanner();
   if (!API) {
     $('main').innerHTML = '<div class="setup"><h2>Shop link needed</h2><p class="mu">Open the link your supplier sent you (it ends with ?api=…) once, then add the app to your home screen.</p></div>';
     $('cart').style.display = 'none'; return;
   }
   if (tab === 'sell') viewSell(); else if (tab === 'stock') viewStock(); else if (tab === 'credit') viewCredit();
   else if (tab === 'order') viewOrder(); else if (tab === 'today') viewToday(); else if (tab === 'more') viewMore();
+  else if (tab === 'inv') viewInvoices(); else if (tab === 'owed') viewOwed(); else if (tab === 'report') viewReports();
   renderCart();
 }
 
@@ -500,7 +551,7 @@ function viewSell() {
   var list = list0.filter(function (i) {
     return (cat === 'All' || i.category === cat) && (!q || (i.name + ' ' + i.code).toLowerCase().indexOf(q.toLowerCase()) > -1);
   });
-  var html = '<input id="q" type="search" placeholder="Search item or code" value="' + esc(q) + '">' +
+  var html = lastSaleBar() + '<div style="display:flex;gap:8px"><input id="q" type="search" placeholder="Search item or code" value="' + esc(q) + '"><button class="ghost" id="scanSell" style="white-space:nowrap">▦ Scan</button></div>' +
     '<div class="chips">' + cats.map(function (c) { return '<button class="chip' + (c === cat ? ' on' : '') + '" data-cat="' + esc(c) + '">' + esc(c) + '</button>'; }).join('') + '</div>' +
     '<div class="grid">' + list.map(function (i) {
       var s = stockOf(i), cls = s <= 0 ? 'out' : (s <= i.reorder ? 'low' : '');
@@ -553,10 +604,12 @@ function renderCart() {
 /* ----- stock ----- */
 function viewStock() {
   if (!v2()) { viewReceive(''); return; }
-  var subs = [['receive', 'Receive'], ['items', 'Items'], ['count', 'Count'], ['aging', 'Aging'], ['expiry', 'Expiry']];
+  var subs = [['receive', 'Receive']].concat(v4() ? [['import', 'Import']] : [], [['items', 'Items'], ['count', 'Count'], ['aging', 'Aging'], ['expiry', 'Expiry']]);
   var head = '<div class="chips">' + subs.map(function (s) {
     return '<button class="chip' + (stockSub === s[0] ? ' on' : '') + '" data-sub="' + s[0] + '">' + s[1] + '</button>';
   }).join('') + '</div>';
+  if (v4() && !planLim().stockTools && (stockSub === 'aging' || stockSub === 'expiry')) { $('main').innerHTML = head + lockCard('Stock ageing and expiry alerts', 'standard'); return; }
+  if (stockSub === 'import' && v4()) { viewImport(head); return; }
   if (stockSub === 'aging') viewAging(head); else if (stockSub === 'expiry') viewExpiry(head);
   else if (stockSub === 'items') viewItems(head); else if (stockSub === 'count') viewCount(head); else viewReceive(head);
 }
@@ -605,6 +658,7 @@ function viewItems(head) {
     var it = editCode ? itemBy(editCode) : null;
     form = '<div class="card"><h3>' + (editCode ? 'Edit ' + esc(it ? it.name : '') : 'New item') + '</h3>' +
       '<label>Item name</label><input data-f="iName" value="' + esc(F.iName) + '">' +
+      '<label>Barcode (optional)</label><div class="two" style="grid-template-columns:1fr auto"><input data-f="iBar" inputmode="numeric" placeholder="Scan or type" value="' + esc(F.iBar) + '"><button class="ghost" id="scanItem">▦ Scan</button></div>' +
       '<label>Category</label><input data-f="iCat" list="catlist" placeholder="e.g. Groceries" value="' + esc(F.iCat) + '">' +
       '<datalist id="catlist">' + items().map(function (i) { return i.category; }).filter(function (v, i, a) { return a.indexOf(v) === i; }).map(function (c) { return '<option value="' + esc(c) + '">'; }).join('') + '</datalist>' +
       '<div class="two"><div><label>Selling price (KES)</label><input data-f="iPrice" type="number" inputmode="decimal" value="' + esc(F.iPrice) + '"></div>' +
@@ -720,6 +774,7 @@ function viewOrder() {
 
 /* ----- today ----- */
 function viewToday() {
+  if (isService()) return viewTodayService();
   var n = todayNums(), t = n.t, owner = isOwner();
   var owed = 0; if (v2()) debtorsNow().forEach(function (d) { owed += d.balance; });
   var net = t.profit - t.exp;
@@ -740,7 +795,7 @@ function viewToday() {
     html += '<div class="card"><h3>Customers owe you</h3><div class="big">' + kes(owed) + '</div></div>';
     var w = S.week;
     if (w) {
-      html += '<div class="card"><h3>Last 7 days</h3><div class="kv"><span>Sales</span><b>' + kes(w.sales) + '</b></div><div class="kv"><span>Profit</span><b>' + kes(w.profit) + '</b></div>' +
+      html += '<div class="card"><h3>Last 7 days</h3>' + (w.daily ? dayCols(w.daily.map(function (d) { return { t: d.t, v: d.sales }; })) : '') + '<div class="kv"><span>Sales</span><b>' + kes(w.sales) + '</b></div><div class="kv"><span>Profit</span><b>' + kes(w.profit) + '</b></div>' +
         (w.exp ? '<div class="kv"><span>Expenses</span><b>' + kes(w.exp.total) + '</b></div><div class="kv"><span>Profit after expenses</span><b>' + kes(w.profit - w.exp.total) + '</b></div>' : '') + '</div>';
       if (v3()) {
         var blk = function (title, arr, fn) { return '<div class="card"><h3>' + title + '</h3>' + (arr && arr.length ? arr.map(fn).join('') : '<div class="mu">Nothing yet</div>') + '</div>'; };
@@ -764,9 +819,11 @@ function viewToday() {
 /* ----- more: expenses and team ----- */
 function viewMore() {
   var subs = v3() ? [['expenses', 'Expenses'], ['team', 'Team']] : [['team', 'Team']];
+  if (v4()) subs = [['business', 'Business']].concat(isService() ? [['prices', 'Price list']] : [], subs, [['activity', 'Activity'], ['plan', 'Plan']]);
   if (!v3()) moreSub = 'team';
+  if (v4() && isService() && !moreTouched && !biz().pin) moreSub = 'business';
   var head = '<div class="chips">' + subs.map(function (s) { return '<button class="chip' + (moreSub === s[0] ? ' on' : '') + '" data-msub="' + s[0] + '">' + s[1] + '</button>'; }).join('') + '</div>';
-  if (moreSub === 'team') viewTeam(head); else viewExpenses(head);
+  if (moreSub === 'team') viewTeam(head); else if (moreSub === 'business') viewBusiness(head); else if (moreSub === 'prices') viewPriceList(head); else if (moreSub === 'plan') viewPlan(head); else if (moreSub === 'activity') viewActivity(head); else viewExpenses(head);
 }
 
 function viewExpenses(head) {
@@ -791,7 +848,7 @@ function viewTeam(head) {
     '<div class="row"><a class="ghost" style="text-decoration:none" target="_blank" rel="noopener" href="https://wa.me/?text=' + encodeURIComponent('Open your Duka POS: ' + linkFor(newLink.key)) + '">Send on WhatsApp</a>' +
     '<button class="ghost" data-copy="' + esc(newLink.key) + '">Copy link</button></div></div>' : '';
   $('main').innerHTML = (head || '') + box + '<div class="card"><h3>Add a cashier</h3>' +
-    '<div class="mu">A cashier phone can sell and record credit payments. It cannot see profit or costs, or receive stock.</div>' +
+    '<div class="mu">' + (isService() ? 'A staff phone can make invoices and record payments. It cannot see reports, cancel invoices or change settings.' : 'A cashier phone can sell and record credit payments. It cannot see profit or costs, or receive stock.') + '</div>' +
     '<label>Cashier name</label><input id="sn" placeholder="e.g. Mary" maxlength="40">' +
     '<div class="row"><button class="go" id="addStaff">Add cashier</button></div></div>' +
     '<div class="card"><h3>Cashiers</h3>' + (staff.length ? staff.map(function (s) {
@@ -802,11 +859,590 @@ function viewTeam(head) {
     '<div class="row"><button class="ghost" id="syncNow" style="flex:1">Sync now</button></div>';
 }
 
+/* ================= v4: SERVICE MODE, INVOICES, REPORTS, PRINTING ================= */
+var v4 = function () { return !!(S && S.v >= 4); };
+var isService = function () { return !!(S && S.mode === 'service'); };
+var biz = function () { return (S && S.biz) || {}; };
+var invList = function () { return (S && S.inv && S.inv.list) || []; };
+var invSub = 'list', invFilter = 'open', invView = null, invLines = [{ desc: '', qty: '1', rate: '' }], invDraftId = null, payAttemptId = null;
+var repPeriod = 'month', repTab = 'income', R = null, repBusy = false, repTried = false, moreTouched = false, lastSale = null, priceEdit = null;
+Object.assign(F, { invCur: 'KES', invRate: '', ipRate: '', iBar: '', invClient: '', invPhone: '', invPin: '', invDays: '14', invVat: '0', invNote: '', ipAmt: '', ipMethod: 'M-Pesa',
+  bType: '', bPin: '', bAddress: '', bPhone: '', bTerms: '', bVat: '0', bTax: 'none', pName: '', pPrice: '', repFrom: '', repTo: '' });
+
+var pad2 = function (n) { return String(n).padStart(2, '0'); };
+var ymd = function (d) { return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()); };
+var money2 = function (n) { return 'KES ' + (Math.round((n || 0) * 100) / 100).toLocaleString('en-KE', { minimumFractionDigits: 0, maximumFractionDigits: 2 }); };
+var pct = function (n) { return (n * 100).toFixed(1) + '%'; };
+var chgTxt = function (cur, prev) {
+  if (!prev) return '—';
+  var c = (cur - prev) / Math.abs(prev) * 100;
+  return (c >= 0 ? '+' : '') + c.toFixed(0) + '%';
+};
+function waNumber(p) {
+  var d = String(p || '').replace(/\D/g, '');
+  if (!d) return '';
+  if (d.charAt(0) === '0') d = '254' + d.slice(1);
+  else if (d.length === 9 && /^[71]/.test(d)) d = '254' + d;
+  return d;
+}
+
+/* ---------- printing: the page prints only #printArea, so the phone's Print > Save as PDF gives a clean document ---------- */
+function printHtml(html) {
+  $('printArea').innerHTML = html;
+  setTimeout(function () { try { window.print(); } catch (e) { toast('Printing is not available here'); } }, 60);
+}
+function docHeader() {
+  var b = biz();
+  return '<div class="dh"><div><div class="dn">' + esc(b.name || (S && S.shop) || '') + '</div>' +
+    (b.address ? '<div>' + esc(b.address) + '</div>' : '') +
+    (b.phone ? '<div>Tel: ' + esc(b.phone) + '</div>' : '') +
+    (b.pin ? '<div>KRA PIN: ' + esc(b.pin) + '</div>' : '') + '</div></div>';
+}
+
+/* ---------- invoice document ---------- */
+function invoiceDoc(inv) {
+  var b = biz(), taxInv = !!(b.pin && inv.vat > 0);
+  var rows = inv.lines.map(function (l) {
+    return '<tr><td>' + esc(l.d) + '</td><td class="r">' + l.q + '</td><td class="r">' + money2c(l.r, inv.cur) + '</td><td class="r">' + money2c(l.a, inv.cur) + '</td></tr>';
+  }).join('');
+  return '<div class="doc">' + docHeader() +
+    '<div class="dt">' + (taxInv ? 'TAX INVOICE' : 'INVOICE') + (inv.status === 'Cancelled' ? ' (CANCELLED)' : '') + '</div>' +
+    '<table class="meta"><tr><td><b>Bill to</b><br>' + esc(inv.client) + (inv.phone ? '<br>' + esc(inv.phone) : '') + (inv.pin ? '<br>PIN: ' + esc(inv.pin) : '') + '</td>' +
+    '<td class="r"><b>' + esc(inv.no) + '</b><br>Date: ' + esc(ymd(new Date(inv.t))) + (inv.due ? '<br>Due: ' + esc(inv.due) : '') + '</td></tr></table>' +
+    '<table class="lines"><thead><tr><th>Description</th><th class="r">Qty</th><th class="r">Rate</th><th class="r">Amount</th></tr></thead><tbody>' + rows + '</tbody></table>' +
+    '<table class="tot"><tr><td>Subtotal</td><td class="r">' + money2c(inv.sub, inv.cur) + '</td></tr>' +
+    (inv.vatRate > 0 ? '<tr><td>VAT ' + inv.vatRate + '%</td><td class="r">' + money2c(inv.vat, inv.cur) + '</td></tr>' : '') +
+    '<tr class="g"><td>Total</td><td class="r">' + money2c(inv.total, inv.cur) + '</td></tr>' +
+    (inv.paid > 0 ? '<tr><td>Paid</td><td class="r">' + money2c(inv.paid, inv.cur) + '</td></tr>' : '') +
+    '<tr class="g"><td>Balance due</td><td class="r">' + money2c(inv.bal, inv.cur) + '</td></tr></table>' +
+    (inv.cur !== 'KES' ? '<p class="terms">Exchange rate used: 1 ' + esc(inv.cur) + ' = KES ' + inv.rate + ' (total ≈ KES ' + Math.round(inv.total * inv.rate).toLocaleString('en-KE') + ')</p>' : '') +
+    (inv.note ? '<p>' + esc(inv.note) + '</p>' : '') +
+    (b.terms ? '<p class="terms"><b>Payment details</b><br>' + esc(b.terms).replace(/\n/g, '<br>') + '</p>' : '') +
+    (inv.etimsRef ? '<p class="terms">KRA eTIMS reference: ' + esc(inv.etimsRef) + '</p>' : '') +
+    '<p class="foot">Thank you for your business.</p></div>';
+}
+function receiptDoc(s) {
+  var b = biz();
+  return '<div class="doc rcpt">' + docHeader() + '<div class="dt">RECEIPT</div><div>' + esc(new Date(s.ts).toLocaleString('en-KE')) + '</div>' +
+    '<table class="lines"><tbody>' + s.lines.map(function (l) { return '<tr><td>' + esc(l.name) + '<br><span class="mu">' + l.qty + ' × ' + money2(l.price) + '</span></td><td class="r">' + money2(l.qty * l.price) + '</td></tr>'; }).join('') + '</tbody></table>' +
+    '<table class="tot"><tr class="g"><td>Total</td><td class="r">' + money2(s.total) + '</td></tr><tr><td>Paid by</td><td class="r">' + esc(s.pay) + '</td></tr>' +
+    (s.cust ? '<tr><td>Customer</td><td class="r">' + esc(s.cust) + '</td></tr>' : '') + '</table><p class="foot">Thank you!</p></div>';
+}
+
+/* ---------- invoices ---------- */
+function invStatus(i) {
+  if (i.status === 'Cancelled') return 'Cancelled';
+  if (!i.open) return 'Paid';
+  if (i.overdue) return 'Overdue';
+  return i.paid > 0 ? 'Part' : 'Unpaid';
+}
+var statusLabel = { Cancelled: 'Cancelled', Paid: 'Paid', Overdue: 'Overdue', Part: 'Part paid', Unpaid: 'Unpaid' };
+
+function invCalc() {
+  var sub = 0;
+  invLines.forEach(function (l) { var q = Number(l.qty), r = Number(l.rate); if (l.desc.trim() && q > 0 && r >= 0) sub += Math.round(q * r * 100) / 100; });
+  var rate = Number(F.invVat) || 0, vat = Math.round(sub * rate) / 100;
+  return { sub: sub, vat: vat, total: Math.round((sub + vat) * 100) / 100 };
+}
+function invTotHtml() { var c = invCalc(), cu = F.invCur || 'KES'; return 'Subtotal ' + money2c(c.sub, cu) + (Number(F.invVat) > 0 ? ' · VAT ' + money2c(c.vat, cu) : '') + ' · <b>Total ' + money2c(c.total, cu) + '</b>' + (cu !== 'KES' && Number(F.invRate) > 0 ? '<br><span class="mu">≈ ' + money2(c.total * Number(F.invRate)) + '</span>' : ''); }
+
+function viewInvoices() {
+  if (invSub === 'new') return viewInvoiceForm();
+  if (invSub === 'view') return viewInvoiceDetail();
+  var all = invList(), o = (S.inv || {});
+  var f = { open: function (i) { return i.status !== 'Cancelled' && i.open; }, overdue: function (i) { return i.overdue; },
+            paid: function (i) { return i.status !== 'Cancelled' && !i.open; }, all: function () { return true; } }[invFilter];
+  var list = all.filter(f);
+  var nudge = isOwner() && !biz().pin && !biz().address
+    ? '<div class="warn">Add your business details (KRA PIN, address, how clients should pay) in <b>More › Business</b> so they print on your invoices.</div>' : '';
+  $('main').innerHTML = nudge +
+    '<div class="row" style="margin:0 0 8px"><button class="go" id="newInv" style="flex:1">+ New invoice</button></div>' +
+    '<div class="chips">' + [['open', 'Unpaid'], ['overdue', 'Overdue' + (o.overdueCount ? ' (' + o.overdueCount + ')' : '')], ['paid', 'Paid'], ['all', 'All']].map(function (c) {
+      return '<button class="chip' + (invFilter === c[0] ? ' on' : '') + '" data-ifilter="' + c[0] + '">' + c[1] + '</button>'; }).join('') + '</div>' +
+    (list.length ? list.map(function (i) {
+      var st = invStatus(i);
+      return '<button class="invrow" data-inv="' + esc(i.no) + '"><span><b>' + esc(i.client) + '</b><br><span class="mu">' + esc(i.no) + ' · ' + esc(ymd(new Date(i.t))) + (i.due ? ' · due ' + esc(i.due) : '') + '</span></span>' +
+        '<span style="text-align:right"><b>' + (i.cur === 'KES' ? kes(i.total) : money2c(i.total, i.cur)) + '</b><br><span class="pill ' + st + '">' + statusLabel[st] + (st === 'Part' || st === 'Overdue' ? ' · ' + (i.cur === 'KES' ? kes(i.bal) : money2c(i.bal, i.cur)) + ' left' : '') + '</span></span></button>';
+    }).join('') : '<div class="card mu">' + (all.length ? 'Nothing in this list.' : 'No invoices yet. Tap “New invoice” to make your first one.') + '</div>');
+}
+
+function viewInvoiceForm() {
+  var names = (S.customers || []).map(function (c) { return '<option value="' + esc(c.name) + '">'; }).join('');
+  var svc = items().filter(function (i) { return i.price > 0; }).slice(0, 10);
+  $('main').innerHTML = '<div class="card"><h3>New invoice</h3>' +
+    '<label>Client name</label><input data-f="invClient" list="clist" autocomplete="off" value="' + esc(F.invClient) + '"><datalist id="clist">' + names + '</datalist>' +
+    '<div class="two"><div><label>Client phone (optional)</label><input id="invPhone" data-f="invPhone" type="tel" value="' + esc(F.invPhone) + '"></div>' +
+    '<div><label>Client KRA PIN (optional)</label><input data-f="invPin" maxlength="11" value="' + esc(F.invPin) + '"></div></div>' +
+    (planLim().trade ? '<div class="two"><div><label>Currency</label><select data-f="invCur">' + CURS().map(function (c) { return '<option' + (c === F.invCur ? ' selected' : '') + '>' + c + '</option>'; }).join('') + '</select></div>' +
+      (F.invCur !== 'KES' ? '<div><label>KES for 1 ' + esc(F.invCur) + '</label><input data-f="invRate" type="number" inputmode="decimal" value="' + esc(F.invRate) + '"></div>' : '<div></div>') + '</div>'
+      : '<div class="row"><button class="chip" data-goplan="1">🔒 Invoice in USD, EUR and more (Pro)</button></div>') +
+    '<div class="two"><div><label>Payment due in</label><select data-f="invDays">' + [['0', 'Today'], ['7', '7 days'], ['14', '14 days'], ['30', '30 days'], ['60', '60 days']].map(function (d) {
+      return '<option value="' + d[0] + '"' + (F.invDays === d[0] ? ' selected' : '') + '>' + d[1] + '</option>'; }).join('') + '</select></div>' +
+    (biz().taxStatus === 'vat' ? '<div><label>VAT</label><select data-f="invVat">' + [['0', 'No VAT'], ['16', 'VAT 16%']].map(function (d) {
+      return '<option value="' + d[0] + '"' + (F.invVat === d[0] ? ' selected' : '') + '>' + d[1] + '</option>'; }).join('') + '</select></div>' : '') + '</div></div>' +
+    '<div class="card"><h3>What you are charging for</h3>' +
+    (svc.length ? '<div class="mu">Tap to add from your price list</div><div class="chips">' + svc.map(function (i) { return '<button class="chip" data-addsvc="' + esc(i.code) + '">' + esc(i.name) + '</button>'; }).join('') + '</div>' : '') +
+    invLines.map(function (l, k) {
+      return '<div class="rl"><input data-il="' + k + '" data-ik="desc" placeholder="Description" value="' + esc(l.desc) + '">' +
+        '<div class="three" style="margin-top:6px"><input data-il="' + k + '" data-ik="qty" type="number" inputmode="decimal" placeholder="Qty" value="' + esc(l.qty) + '">' +
+        '<input data-il="' + k + '" data-ik="rate" type="number" inputmode="decimal" placeholder="Price each" value="' + esc(l.rate) + '">' +
+        '<button class="ghost danger" data-rmil="' + k + '">Remove</button></div></div>';
+    }).join('') +
+    '<div class="row"><button class="ghost" id="addInvLine" style="flex:1">+ Add another line</button></div>' +
+    '<label>Note on the invoice (optional)</label><input data-f="invNote" value="' + esc(F.invNote) + '">' +
+    '<div id="invTot" style="margin-top:10px;font-size:15px">' + invTotHtml() + '</div>' +
+    '<div class="row"><button class="ghost" id="cancelInvForm">Cancel</button><button class="go" id="saveInv">Save invoice</button></div></div>';
+}
+
+function viewInvoiceDetail() {
+  var inv = invList().find(function (i) { return i.no === invView; });
+  if (!inv) { invSub = 'list'; return viewInvoices(); }
+  var st = invStatus(inv), owner = isOwner();
+  var payBox = inv.status !== 'Cancelled' && inv.open
+    ? '<div class="card"><h3>Record a payment</h3><div class="two"><div><label>Amount (' + esc(inv.cur) + ')</label><input data-f="ipAmt" type="number" inputmode="decimal" value="' + esc(F.ipAmt || inv.bal) + '"></div>' +
+      '<div><label>Paid with</label><select data-f="ipMethod">' + opts(['M-Pesa', 'Cash', 'Bank'], F.ipMethod) + '</select></div></div>' +
+      (inv.cur !== 'KES' ? '<label>Exchange rate today (KES for 1 ' + esc(inv.cur) + ')</label><input data-f="ipRate" type="number" inputmode="decimal" value="' + esc(F.ipRate || lastRate(inv.cur) || inv.rate) + '"><div class="mu">Invoiced at ' + inv.rate + '. The difference becomes an exchange gain or loss in your income statement.</div>' : '') +
+      '<div class="row"><button class="go" id="payInv" style="flex:1">Save payment</button></div></div>' : '';
+  var phone = waNumber(inv.phone);
+  var msg = 'Invoice ' + inv.no + ' from ' + (biz().name || S.shop) + ': total ' + money2c(inv.total, inv.cur) + (inv.bal < inv.total ? ', balance ' + money2c(inv.bal, inv.cur) : '') +
+    (inv.due ? ', due ' + inv.due : '') + '.' + (biz().terms ? ' ' + biz().terms : '');
+  $('main').innerHTML = '<div class="row" style="margin:0 0 8px"><button class="ghost" id="backInv">‹ All invoices</button><span class="pill ' + st + '">' + statusLabel[st] + '</span></div>' +
+    '<div class="card">' + invoiceDoc(inv) + '</div>' +
+    '<div class="row"><button class="go" id="printInv">Print / Save as PDF</button>' +
+    '<a class="ghost" style="text-decoration:none;text-align:center;flex:1" target="_blank" rel="noopener" href="https://wa.me/' + phone + '?text=' + encodeURIComponent(msg) + '">WhatsApp</a></div>' +
+    (inv.etims && inv.etims !== 'Off' ? '<p class="mu">KRA eTIMS: ' + esc(inv.etims) + (inv.etimsRef ? ' · ' + esc(inv.etimsRef) : '') + '</p>' : '') +
+    payBox +
+    (owner && inv.status !== 'Cancelled' && inv.paid <= 0 ? '<div class="row"><button class="ghost danger" id="cancelInv">Cancel this invoice</button></div>' : '');
+}
+
+async function saveInvoiceForm() {
+  var lines = invLines.filter(function (l) { return l.desc.trim() && Number(l.qty) > 0 && l.rate !== '' && Number(l.rate) >= 0; })
+    .map(function (l) { return { desc: l.desc.trim(), qty: Number(l.qty), rate: Number(l.rate) }; });
+  if (!F.invClient.trim()) { toast('Type the client name'); return; }
+  if (!lines.length) { toast('Add at least one line with a description and price'); return; }
+  if (F.invCur !== 'KES' && !(Number(F.invRate) > 0)) { toast('Type the exchange rate'); return; }
+  if (!invDraftId) invDraftId = uid();   // kept until it saves, so a retry never makes a second invoice
+  var due = F.invDays === '' ? '' : ymd(new Date(Date.now() + Number(F.invDays) * 864e5));
+  var j = await onlineAction({ action: 'saveInvoice', id: invDraftId, client: F.invClient.trim(), phone: F.invPhone.trim(), pin: F.invPin.trim(),
+    due: due, vatRate: Number(F.invVat) || 0, note: F.invNote.trim(), lines: lines, currency: F.invCur, rate: F.invCur === 'KES' ? 1 : Number(F.invRate) }, 'Invoice saved');
+  if (j) {
+    if (F.invCur !== 'KES') keepRate(F.invCur, F.invRate);
+    invDraftId = null; invLines = [{ desc: '', qty: '1', rate: '' }];
+    F.invClient = F.invPhone = F.invPin = F.invNote = '';
+    invView = j.number; invSub = 'view'; render(true);
+  }
+}
+async function payInvoiceForm() {
+  var inv = invList().find(function (i) { return i.no === invView; }); if (!inv) return;
+  var amt = Number(F.ipAmt || inv.bal);
+  if (!(amt > 0)) { toast('Type the amount paid'); return; }
+  if (!payAttemptId) payAttemptId = uid();
+  var j = await onlineAction({ action: 'payInvoice', id: payAttemptId, number: inv.no, amount: amt, method: F.ipMethod, rate: Number(F.ipRate) || 0 }, 'Payment saved');
+  if (j) { if (inv.cur !== 'KES') keepRate(inv.cur, F.ipRate); payAttemptId = null; F.ipAmt = ''; F.ipRate = ''; render(true); }
+}
+async function cancelInvoiceNow() {
+  if (!confirm('Cancel this invoice? This cannot be undone.')) return;
+  var j = await onlineAction({ action: 'cancelInvoice', number: invView }, 'Invoice cancelled');
+  if (j) render(true);
+}
+
+/* ---------- who owes you (service) ---------- */
+function viewOwed() {
+  var list = invList().filter(function (i) { return i.status !== 'Cancelled' && i.open; }).sort(function (a, b) { return (b.overdue - a.overdue) || (a.due || 'z').localeCompare(b.due || 'z'); });
+  var total = 0; list.forEach(function (i) { total += i.balKes; });
+  $('main').innerHTML = '<div class="hero"><div class="hi">Clients owe you</div><div class="amt">' + kes(total) + '</div><div class="sub">' + list.length + ' unpaid invoice' + (list.length === 1 ? '' : 's') +
+    ((S.inv || {}).overdueCount ? ' · ' + S.inv.overdueCount + ' overdue (' + kes(S.inv.overdue) + ')' : '') + '</div></div>' +
+    (list.length ? list.map(function (i) {
+      return '<button class="invrow" data-inv="' + esc(i.no) + '"><span><b>' + esc(i.client) + '</b><br><span class="mu">' + esc(i.no) + (i.due ? ' · due ' + esc(i.due) : '') + '</span></span><span style="text-align:right"><b class="' + (i.overdue ? 'red' : '') + '">' + (i.cur === 'KES' ? kes(i.bal) : money2c(i.bal, i.cur)) + '</b><br><span class="mu">' + (i.overdue ? 'overdue' : 'open') + '</span></span></button>';
+    }).join('') : '<div class="card mu">Nobody owes you. Nice.</div>');
+}
+
+/* ---------- today (service) ---------- */
+function viewTodayService() {
+  var o = S.inv || { today: {}, week: {}, daily: [] }, t = S.today || {}, e = t.exp || { total: 0, cash: 0, mpesa: 0 };
+  var late = invList().filter(function (i) { return i.overdue; }).slice(0, 5);
+  var html = '<div class="hero"><div class="hi">' + greet() + '</div><div class="amt">' + kes(o.today.collected || 0) + '</div><div class="sub">Paid to you today · invoiced today ' + kes(o.issuedToday || 0) + '</div></div>';
+  html += '<div class="kpis">' + kpi('Clients owe you', kes(o.outstanding || 0), o.overdueCount ? '<span class="down">' + kes(o.overdue) + ' overdue</span>' : '<span class="up">Nothing overdue</span>', o.overdueCount ? 'neg' : '') +
+    kpi('In minus expenses', kes((o.today.collected || 0) - e.total), 'today', 'pos') + '</div>';
+  html += '<div class="card"><h3>Paid to you, last 7 days</h3>' + dayCols((o.daily || []).map(function (d) { return { t: d.t, v: d.collected }; })) +
+    '<div class="kv"><span>Invoiced</span><b>' + kes(o.issuedWeek || 0) + '</b></div><div class="kv"><span>Paid to you</span><b>' + kes(o.week.collected || 0) + '</b></div>' +
+    '<div class="kv"><span>Expenses</span><b>' + kes(((S.week || {}).exp || {}).total || 0) + '</b></div></div>';
+  html += '<div class="card"><h3>Money today</h3><div class="kv"><span>Cash in</span><b>' + kes(o.today.cash || 0) + '</b></div><div class="kv"><span>M-Pesa in</span><b>' + kes(o.today.mpesa || 0) + '</b></div>' +
+    '<div class="kv"><span>Bank in</span><b>' + kes(o.today.bank || 0) + '</b></div><div class="kv"><span>Expenses</span><b>' + kes(e.total) + '</b></div></div>';
+  if (late.length) html += '<div class="card"><h3 class="amb">Chase these first</h3>' + late.map(function (i) { return '<button class="invrow" data-inv="' + esc(i.no) + '"><span>' + esc(i.client) + '<br><span class="mu">' + esc(i.no) + ' · due ' + esc(i.due) + '</span></span><b>' + (i.cur === 'KES' ? kes(i.bal) : money2c(i.bal, i.cur)) + '</b></button>'; }).join('') + '</div>';
+  html += '<p class="mu" style="text-align:center">' + (lastSync ? 'Last synced ' + lastSync.toLocaleTimeString('en-KE', { hour: '2-digit', minute: '2-digit' }) : '') + '</p>';
+  $('main').innerHTML = html;
+}
+
+/* ---------- reports ---------- */
+function periodRange(p) {
+  var n = new Date(), t = ymd(n), d;
+  if (p === 'today') return [t, t];
+  if (p === 'week') { d = new Date(n); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return [ymd(d), t]; }
+  if (p === 'month') return [ymd(new Date(n.getFullYear(), n.getMonth(), 1)), t];
+  if (p === 'last') return [ymd(new Date(n.getFullYear(), n.getMonth() - 1, 1)), ymd(new Date(n.getFullYear(), n.getMonth(), 0))];
+  d = new Date(n); d.setDate(d.getDate() - 29); return [ymd(d), t];   // last 30 days
+}
+async function loadReport() {
+  var r = repPeriod === 'custom' ? [F.repFrom, F.repTo] : periodRange(repPeriod);
+  if (!r[0] || !r[1]) { toast('Pick both dates'); return; }
+  if (!navigator.onLine) { toast('Reports need internet'); return; }
+  repBusy = true; R = null; render(true);
+  try {
+    var j = await post({ token: KEY, action: 'report', from: r[0], to: r[1] });
+    if (!j.ok) toast(j.error || 'Could not make the report'); else R = j;
+  } catch (e) { toast('Could not reach the server'); }
+  repBusy = false; render(true);
+}
+
+var trow = function (a, b, cls) { return '<tr' + (cls ? ' class="' + cls + '"' : '') + '><td>' + a + '</td><td class="r">' + b + '</td></tr>'; };
+function repTitle() {
+  var m = { income: 'Income statement', money: 'Money in and out', position: 'Business position', owed: 'Who owes you', stock: 'Stock valuation', items: 'Sales by item', vat: 'VAT on invoices' };
+  return m[repTab] || '';
+}
+/* ---------- small chart pieces (screen and print) ---------- */
+var ICON = {
+  sell: '<path d="M3 4h2l2 11h10l2-8H7"/><circle cx="9" cy="19" r="1.5"/><circle cx="17" cy="19" r="1.5"/>',
+  stock: '<path d="M3 7l9-4 9 4-9 4-9-4z"/><path d="M3 7v10l9 4 9-4V7"/><path d="M12 11v10"/>',
+  credit: '<rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18"/><path d="M7 15h4"/>',
+  order: '<path d="M3 7h11v9H3z"/><path d="M14 10h4l3 3v3h-7z"/><circle cx="7" cy="18" r="1.6"/><circle cx="17" cy="18" r="1.6"/>',
+  today: '<path d="M4 20V10"/><path d="M10 20V4"/><path d="M16 20v-7"/><path d="M22 20H2"/>',
+  report: '<path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5"/><path d="M9 14h7M9 17h5"/>',
+  more: '<circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/>',
+  inv: '<path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6"/>',
+  owed: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>'
+};
+var icon = function (n) { return ICON[n] ? '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' + ICON[n] + '</svg>' : ''; };
+
+/** delta chip: invert = true when "up" is bad (expenses) */
+function dTag(cur, prev, invert) {
+  if (!prev) return '<span class="mu">no earlier figure</span>';
+  var c = (cur - prev) / Math.abs(prev) * 100, good = invert ? c <= 0 : c >= 0;
+  return '<span class="' + (good ? 'up' : 'down') + '">' + (c >= 0 ? '▲ ' : '▼ ') + Math.abs(c).toFixed(0) + '%</span> <span class="mu">vs before</span>';
+}
+function kpi(label, value, extra, tone) { return '<div class="kpi ' + (tone || '') + '"><div class="l">' + label + '</div><div class="v">' + value + '</div><div class="d">' + (extra || '') + '</div></div>'; }
+/** one bar split into coloured parts: parts = [{label, value, color}] */
+function segBar(parts) {
+  var tot = 0; parts.forEach(function (p) { tot += Math.max(0, p.value); });
+  if (!(tot > 0)) return '';
+  return '<div class="seg">' + parts.filter(function (p) { return p.value > 0; }).map(function (p) { return '<i style="width:' + (p.value / tot * 100) + '%;background:' + p.color + '"></i>'; }).join('') + '</div>' +
+    '<div class="legend">' + parts.filter(function (p) { return p.value > 0; }).map(function (p) { return '<span><b style="background:' + p.color + '"></b>' + esc(p.label) + '</span>'; }).join('') + '</div>';
+}
+/** horizontal bars: rows = [{name, value, note}] */
+function hBars(rows, color) {
+  var max = 0; rows.forEach(function (r) { max = Math.max(max, r.value); });
+  if (!(max > 0)) return '';
+  return rows.map(function (r) {
+    return '<div class="hb"><div class="t"><span>' + esc(r.name) + '</span><b>' + esc(r.label || money2(r.value)) + '</b></div><div class="b"><i style="width:' + Math.max(2, r.value / max * 100) + '%;' + (color ? 'background:' + color : '') + '"></i></div></div>';
+  }).join('');
+}
+/** seven day column chart: days = [{t, v}] */
+function dayCols(days) {
+  var max = 0; days.forEach(function (d) { max = Math.max(max, d.v); });
+  return '<div class="cols">' + days.map(function (d) {
+    var h = max > 0 ? Math.max(3, d.v / max * 100) : 3;
+    return '<div title="' + esc(kes(d.v)) + '"><i style="height:' + h + '%"></i><span>' + ['S', 'M', 'T', 'W', 'T', 'F', 'S'][new Date(d.t).getDay()] + '</span></div>';
+  }).join('') + '</div>';
+}
+function lockCard(title, need) {
+  var nm = need === 'pro' ? 'Pro' : 'Standard';
+  return '<div class="card lock"><div class="lk">🔒</div><h3>' + esc(title) + '</h3><div class="mu">Part of the ' + nm + ' plan.</div><div class="row"><button class="go" data-goplan="1" style="flex:1">See plans</button></div></div>';
+}
+var planLim = function () { return (S && S.plan && S.plan.limits) || { staff: 10, invoicesPerMonth: 0, reports: ['income', 'money', 'owed', 'items', 'stock', 'vat', 'position'], customDates: true, stockTools: true, weekly: true, etims: true }; };
+function planBanner() {
+  var p = S && S.plan; if (!p || !isOwner()) return '';
+  var until = p.until ? new Date(p.until).toLocaleDateString('en-KE', { day: 'numeric', month: 'short' }) : '';
+  if (p.expired) return '<div class="bn"><span>Your plan ended' + (until ? ' on ' + until : '') + '. You are on Starter now. Your records are safe.</span><button class="ghost" data-goplan="1">Renew</button></div>';
+  if (p.daysLeft !== null && p.daysLeft <= 7 && p.id !== 'starter') return '<div class="bn"><span>' + esc(p.name) + ' plan ends in ' + Math.max(0, p.daysLeft) + ' day' + (p.daysLeft === 1 ? '' : 's') + '.</span><button class="ghost" data-goplan="1">Keep it</button></div>';
+  return '';
+}
+function viewPlan(head) {
+  var p = S.plan || { id: 'standard', name: 'Standard', all: [], limits: {} }, order = ['starter', 'standard', 'pro'];
+  var msg = function (id) { return encodeURIComponent('Hello, I would like to ' + (id === p.id ? 'renew' : 'upgrade') + ' ' + ((S.biz && S.biz.name) || S.shop) + ' to the ' + id.charAt(0).toUpperCase() + id.slice(1) + ' plan.'); };
+  var wa = function (id) { return p.contact ? 'https://wa.me/' + String(p.contact).replace(/\D/g, '') + '?text=' + msg(id) : ''; };
+  $('main').innerHTML = (head || '') + '<div class="hero"><div class="hi">Your plan</div><div class="amt">' + esc(p.name) + '</div><div class="sub">' +
+    (p.until ? (p.expired ? 'Ended ' : 'Until ') + new Date(p.until).toLocaleDateString('en-KE', { day: 'numeric', month: 'long', year: 'numeric' }) + (p.daysLeft > 0 ? ' · ' + p.daysLeft + ' days left' : '') : (p.id === 'starter' ? 'Free, no end date' : 'No end date')) + '</div></div>' +
+    '<div class="mu" style="margin:0 0 8px">' + esc(p.note || '') + '</div>' +
+    (p.all || []).slice().sort(function (a, b) { return order.indexOf(a.id) - order.indexOf(b.id); }).map(function (x) {
+      var cur = x.id === p.id;
+      return '<div class="card plan' + (cur ? ' cur' : '') + '"><div class="ph"><h3>' + esc(x.name) + (cur ? ' <span class="pill Paid">Your plan</span>' : '') + '</h3><b>' + (x.price ? kes(x.price) + '<span class="mu"> / month</span>' : 'Free') + '</b></div>' +
+        '<ul>' + x.perks.map(function (t) { return '<li>' + esc(t) + '</li>'; }).join('') + '</ul>' +
+        (cur ? (x.id !== 'starter' ? (wa(x.id) ? '<a class="ghost" style="display:block;text-align:center;text-decoration:none" target="_blank" rel="noopener" href="' + wa(x.id) + '">Renew on WhatsApp</a>' : '') : '')
+             : (order.indexOf(x.id) > order.indexOf(p.id) && wa(x.id) ? '<a class="go" style="display:block;text-align:center;text-decoration:none" target="_blank" rel="noopener" href="' + wa(x.id) + '">Upgrade to ' + esc(x.name) + '</a>' : '')) + '</div>';
+    }).join('') +
+    '<p class="mu" style="text-align:center">You never lose your records when a plan changes. Only the extra tools stop.</p>';
+}
+
+function reportDoc() {
+  var r = R, c = r.income, p = r.prev, h = '';
+  var span = (repTab === 'stock' || repTab === 'position' || repTab === 'owed') ? 'As at ' + ymd(new Date(r.generated)) : r.from + '  to  ' + r.to;
+  h += '<div class="band"><div class="bt">' + esc(repTitle()) + '</div><div class="bs">' + esc(span) + '</div></div>';
+  var tiles = '', body = '';
+  if (repTab === 'income') {
+    var svc = r.mode === 'service';
+    tiles = '<div class="kpis">' + kpi('Revenue', money2(c.revenue), dTag(c.revenue, p.revenue)) +
+      (svc ? kpi('Expenses', money2(c.expenses), dTag(c.expenses, p.expenses, true)) : kpi('Gross profit', money2(c.gross), pct(c.margin) + ' margin')) +
+      (svc ? '' : kpi('Expenses', money2(c.expenses), dTag(c.expenses, p.expenses, true))) +
+      kpi('Net profit', money2(c.net), (c.revenue > 0 ? pct(c.netMargin) + ' of revenue · ' : '') + dTag(c.net, p.net), c.net >= 0 ? 'pos' : 'neg') + '</div>';
+    if (c.revenue > 0) body += '<div class="sec">Where each KES 100 went</div>' + segBar([
+      { label: 'Cost of goods ' + (c.cogs / c.revenue * 100).toFixed(0), value: c.cogs, color: '#64748b' },
+      { label: 'Expenses ' + (c.expenses / c.revenue * 100).toFixed(0), value: c.expenses, color: '#d97706' },
+      { label: 'Profit ' + (Math.max(c.net, 0) / c.revenue * 100).toFixed(0), value: Math.max(c.net, 0), color: '#0f766e' }]);
+    if (c.catList.length) body += '<div class="sec">Expenses by type</div>' + hBars(c.catList.map(function (e) { return { name: e.name, value: e.amount }; }), '#d97706');
+    body += '<div class="sec">The statement</div><table class="tot">' + trow('<b>Revenue</b>', '');
+    if (r.mode === 'goods' || c.sales) body += trow('Sales', money2(c.sales));
+    if (svc || c.services) body += trow('Services invoiced (before VAT)', money2(c.services));
+    body += trow('Total revenue', money2(c.revenue), 'g');
+    if (r.mode === 'goods' || c.cogs) body += trow('Cost of goods sold', '(' + money2(c.cogs) + ')') + trow('Gross profit', money2(c.gross) + ' · ' + pct(c.margin), 'g');
+    if (c.fx) body += trow('Exchange gain / (loss) on foreign payments', c.fx < 0 ? '(' + money2(-c.fx) + ')' : money2(c.fx), 'g');
+    body += trow('<b>Expenses</b>', '') + (c.catList.length ? c.catList.map(function (e) { return trow(esc(e.name), '(' + money2(e.amount) + ')'); }).join('') : trow('<span class="mu">None recorded</span>', ''));
+    body += trow('Total expenses', '(' + money2(c.expenses) + ')', 'g') + trow('NET PROFIT', money2(c.net), 'g') + '</table>';
+    body += '<div class="sec">Against the period before</div><table class="lines"><thead><tr><th></th><th class="r">Before</th><th class="r">Now</th><th class="r">Change</th></tr></thead><tbody>' +
+      [['Revenue', 'revenue'], ['Gross profit', 'gross'], ['Expenses', 'expenses'], ['Net profit', 'net']].map(function (x) {
+        return '<tr><td>' + x[0] + '</td><td class="r">' + money2(p[x[1]]) + '</td><td class="r">' + money2(c[x[1]]) + '</td><td class="r">' + chgTxt(c[x[1]], p[x[1]]) + '</td></tr>'; }).join('') + '</tbody></table>';
+    body += '<p class="note">' + (svc ? 'Invoices count as revenue on the day they are issued, not when they are paid. VAT is not revenue and is left out. ' : 'Profit uses your average buying cost. ') + 'A management report: no depreciation, loans or income tax.</p>';
+  } else if (repTab === 'money') {
+    var m = r.money, tin = m.cashIn + m.mpesaIn + m.bankIn, tout = m.cashOut + m.mpesaOut;
+    tiles = '<div class="kpis">' + kpi('Money in', money2(tin), '', 'pos') + kpi('Money out', money2(tout), '') + kpi('Net movement', money2(m.net), '', m.net >= 0 ? 'pos' : 'neg') + '</div>';
+    body += '<div class="sec">How the money came in</div>' + segBar([{ label: 'Cash ' + money2(m.cashIn), value: m.cashIn, color: '#0f766e' }, { label: 'M-Pesa ' + money2(m.mpesaIn), value: m.mpesaIn, color: '#16a34a' }, { label: 'Bank ' + money2(m.bankIn), value: m.bankIn, color: '#2563eb' }]);
+    body += '<table class="tot">' + trow('<b>Money in</b>', '') + trow('Cash', money2(m.cashIn)) + trow('M-Pesa', money2(m.mpesaIn)) + (m.bankIn ? trow('Bank', money2(m.bankIn)) : '') + trow('Total in', money2(tin), 'g') +
+      trow('<b>Money out (expenses)</b>', '') + trow('Cash', '(' + money2(m.cashOut) + ')') + trow('M-Pesa', '(' + money2(m.mpesaOut) + ')') + trow('Total out', '(' + money2(tout) + ')', 'g') + trow('Net money movement', money2(m.net), 'g') + '</table>' +
+      '<p class="note">Counts money actually received. Credit sales and unpaid invoices are not money yet. Supplier payments are not recorded in the app, so they are not here.</p>';
+  } else if (repTab === 'position') {
+    var ps = r.position;
+    tiles = '<div class="kpis">' + (r.mode === 'goods' ? kpi('Stock at cost', money2(ps.stock), '') : '') + kpi('Owed to you', money2(ps.receivables), '') + kpi('Total tracked', money2(ps.tracked), '', 'pos') + '</div>';
+    body += segBar([{ label: 'Stock', value: ps.stock, color: '#64748b' }, { label: 'Owed to you', value: ps.receivables, color: '#0f766e' }]);
+    body += '<table class="tot">' + trow('<b>What the business holds</b>', '') + (r.mode === 'goods' ? trow('Stock at cost', money2(ps.stock)) : '') + trow('Money owed to you', money2(ps.receivables)) + trow('Total tracked', money2(ps.tracked), 'g') + '</table>' +
+      '<p class="note"><b>This is not a full balance sheet.</b> It does not know your bank, cash or M-Pesa balances, what you owe suppliers, loans or equipment. Those are not recorded in the app. Share these figures with your accountant for a full balance sheet.</p>';
+  } else if (repTab === 'owed') {
+    var rc = r.recv;
+    tiles = '<div class="kpis">' + kpi('Everyone owes you', money2(rc.total), '', 'neg') + (r.mode === 'service' ? kpi('Unpaid invoices', money2(rc.invoiceTotal), (rc.invoices.length) + ' open') : '') + (r.mode === 'goods' || rc.customers.length ? kpi('On credit', money2(rc.customerTotal), rc.customers.length + ' customers') : '') + '</div>';
+    if (r.mode === 'service') {
+      body += '<div class="sec">How late is it?</div>' + segBar(Object.keys(rc.buckets).map(function (k, i) { return { label: k + ' ' + money2(rc.buckets[k]), value: rc.buckets[k], color: ['#0f766e', '#d97706', '#ea580c', '#dc2626', '#7f1d1d'][i] }; }));
+      body += rc.invoices.length ? '<table class="lines"><thead><tr><th>Invoice</th><th>Client</th><th>Due</th><th class="r">Balance</th></tr></thead><tbody>' + rc.invoices.map(function (i) {
+        return '<tr><td>' + esc(i.no) + '</td><td>' + esc(i.client) + (i.phone ? '<br><span class="mu">' + esc(i.phone) + '</span>' : '') + '</td><td>' + esc(i.due || '—') + (i.late ? '<br><span class="red">' + i.late + ' days late</span>' : '') + '</td><td class="r">' + money2c(i.bal, i.cur) + (i.cur !== 'KES' ? '<br><span class="mu">≈ ' + money2(i.balKes) + '</span>' : '') + '</td></tr>'; }).join('') + '</tbody></table>' : '<p>No unpaid invoices.</p>';
+    }
+    if (r.mode === 'goods' || rc.customers.length) {
+      body += '<div class="sec">Customers on credit</div><table class="lines"><thead><tr><th>Customer</th><th>Oldest unpaid</th><th class="r">Balance</th></tr></thead><tbody>' + (rc.customers.length ? rc.customers.map(function (d) {
+        return '<tr><td>' + esc(d.name) + (d.phone ? '<br><span class="mu">' + esc(d.phone) + '</span>' : '') + '</td><td>' + d.oldestDays + ' days</td><td class="r">' + money2(d.balance) + '</td></tr>'; }).join('') : '<tr><td colspan="3">Nobody owes you on credit.</td></tr>') + '</tbody></table>';
+    }
+  } else if (repTab === 'stock') {
+    var sk = r.stock;
+    tiles = '<div class="kpis">' + kpi('Stock at cost', money2(sk.cost), sk.count + ' items', 'pos') + kpi('At selling price', money2(sk.retail), '') + kpi('Profit if all sold', money2(sk.retail - sk.cost), pct(sk.retail ? (sk.retail - sk.cost) / sk.retail : 0) + ' margin') + kpi('Out of stock', String(sk.out), 'items') + '</div>';
+    body += (sk.noCost ? '<p class="note red">' + sk.noCost + ' item(s) have no buying cost recorded, so their value shows as 0. Record a delivery for them.</p>' : '') +
+      '<div class="sec">Where your money is sitting</div>' + hBars(sk.list.slice(0, 8).map(function (i) { return { name: i.name, value: i.value }; }), '#64748b') +
+      '<table class="lines"><thead><tr><th>Item</th><th class="r">Qty</th><th class="r">Cost each</th><th class="r">Value</th></tr></thead><tbody>' + sk.list.map(function (i) {
+        return '<tr><td>' + esc(i.name) + '</td><td class="r">' + i.qty + '</td><td class="r">' + money2(i.cost) + '</td><td class="r">' + money2(i.value) + '</td></tr>'; }).join('') + '</tbody></table>';
+  } else if (repTab === 'items') {
+    var tp = 0, tr2 = 0; r.items.forEach(function (i) { tp += i.profit; tr2 += i.revenue; });
+    tiles = '<div class="kpis">' + kpi('Sales', money2(tr2), r.items.length + ' items') + kpi('Profit', money2(tp), tr2 ? pct(tp / tr2) + ' margin' : '', 'pos') + '</div>';
+    body += '<div class="sec">Most profit</div>' + hBars(r.items.slice(0, 8).map(function (i) { return { name: i.name, value: Math.max(0, i.profit) }; }), '#0f766e') +
+      '<table class="lines"><thead><tr><th>Item</th><th class="r">Sold</th><th class="r">Sales</th><th class="r">Profit</th></tr></thead><tbody>' + (r.items.length ? r.items.map(function (i) {
+        return '<tr><td>' + esc(i.name) + '</td><td class="r">' + i.qty + '</td><td class="r">' + money2(i.revenue) + '</td><td class="r">' + money2(i.profit) + '</td></tr>'; }).join('') : '<tr><td colspan="4">No sales in this period.</td></tr>') + '</tbody></table><p class="note">Top 40 items by profit.</p>';
+  } else if (repTab === 'vat') {
+    var v = r.vat;
+    tiles = '<div class="kpis">' + kpi('Before VAT', money2(v.sub), v.list.length + ' invoices') + kpi('VAT charged', money2(v.vat), '', 'pos') + '</div>';
+    body += '<table class="lines"><thead><tr><th>Invoice</th><th>Client</th><th class="r">Before VAT</th><th class="r">VAT</th></tr></thead><tbody>' + (v.list.length ? v.list.map(function (i) {
+      return '<tr><td>' + esc(i.no) + '</td><td>' + esc(i.client) + (i.pin ? '<br><span class="mu">' + esc(i.pin) + '</span>' : '') + '</td><td class="r">' + money2(i.sub) + '</td><td class="r">' + money2(i.vat) + '</td></tr>'; }).join('') : '<tr><td colspan="4">No invoices in this period.</td></tr>') +
+      '</tbody></table><p class="note">VAT charged on invoices issued in the period. It does not include VAT you paid on purchases.</p>';
+  }
+  return '<div class="doc">' + docHeader() + h + tiles + body + '<p class="foot">Made with Duka POS · ' + esc(new Date(r.generated).toLocaleString('en-KE')) + '</p></div>';
+}
+
+function viewReports() {
+  if (!isOwner()) { $('main').innerHTML = '<div class="card mu">Reports are for the owner.</div>'; return; }
+  var lim = planLim();
+  var periods = [['today', 'Today'], ['week', 'This week'], ['month', 'This month'], ['last', 'Last month'], ['30', 'Last 30 days'], ['custom', 'Pick dates']];
+  var tabsR = isService() ? [['income', 'Income'], ['money', 'Money'], ['owed', 'Owed']].concat(biz().taxStatus === 'vat' ? [['vat', 'VAT']] : [], [['position', 'Position']])
+                          : [['income', 'Income'], ['money', 'Money'], ['items', 'By item'], ['stock', 'Stock'], ['owed', 'Owed'], ['position', 'Position']];
+  if (!tabsR.some(function (t) { return t[0] === repTab; })) repTab = 'income';
+  var locked = lim.reports.indexOf(repTab) < 0, customLocked = repPeriod === 'custom' && !lim.customDates;
+  if (!R && !repBusy && !repTried && !locked && !customLocked) { repTried = true; setTimeout(loadReport, 0); }
+  var html = '<div class="chips">' + periods.map(function (p) { return '<button class="chip' + (repPeriod === p[0] ? ' on' : '') + '" data-period="' + p[0] + '">' + (p[0] === 'custom' && !lim.customDates ? '🔒 ' : '') + p[1] + '</button>'; }).join('') + '</div>';
+  if (repPeriod === 'custom' && lim.customDates) html += '<div class="two"><input data-f="repFrom" type="date" value="' + esc(F.repFrom) + '"><input data-f="repTo" type="date" value="' + esc(F.repTo) + '"></div><div class="row"><button class="ghost" id="runReport" style="flex:1">Show report</button></div>';
+  html += '<div class="chips">' + tabsR.map(function (t) { return '<button class="chip' + (repTab === t[0] ? ' on' : '') + '" data-rtab="' + t[0] + '">' + (lim.reports.indexOf(t[0]) < 0 ? '🔒 ' : '') + t[1] + '</button>'; }).join('') + '</div>';
+  if (customLocked) html += lockCard('Reports for any dates', 'standard');
+  else if (locked) html += lockCard(repTitle(), 'standard');
+  else if (repBusy) html += '<div class="card mu">Working it out…</div>';
+  else if (!R) html += '<div class="card mu">' + (navigator.onLine ? 'Pick a period to see the report.' : 'Reports need internet.') + '</div>';
+  else if (!R[repTab === 'owed' ? 'recv' : repTab]) html += lockCard(repTitle(), 'standard');
+  else html += '<div class="card repcard">' + reportDoc() + '</div><div class="row"><button class="go" id="printRep">Print / Save as PDF</button></div>';
+  $('main').innerHTML = html;
+}
+
+/* ---------- business profile and price list (More) ---------- */
+function openBusiness() {
+  var b = biz();
+  F.bType = b.type || ''; F.bPin = b.pin || ''; F.bAddress = b.address || ''; F.bPhone = b.phone || ''; F.bTerms = b.terms || ''; F.bVat = String(b.vat || 0); F.bTax = b.taxStatus === 'vat' ? 'vat' : 'none';
+}
+function viewBusiness(head) {
+  var b = biz();
+  $('main').innerHTML = head + '<div class="card"><h3>Business details</h3><div class="mu">These print on your invoices and reports.</div>' +
+    (isService() ? '<label>What kind of business (optional)</label><input data-f="bType" placeholder="e.g. Carpenter, Salon, Consultant" value="' + esc(F.bType) + '">' : '') +
+    '<div class="two"><div><label>KRA PIN</label><input data-f="bPin" maxlength="11" placeholder="A123456789Z" value="' + esc(F.bPin) + '"></div><div><label>Phone</label><input data-f="bPhone" type="tel" value="' + esc(F.bPhone) + '"></div></div>' +
+    '<label>Address</label><input data-f="bAddress" placeholder="Town, building, street" value="' + esc(F.bAddress) + '">' +
+    '<label>Tax status</label><select data-f="bTax"><option value="none"' + (F.bTax !== 'vat' ? ' selected' : '') + '>Not registered for VAT</option><option value="vat"' + (F.bTax === 'vat' ? ' selected' : '') + '>Registered for VAT (16%)</option></select>' +
+    '<div class="mu">' + (F.bTax === 'vat' ? 'VAT choices appear on invoices and the VAT report.' : 'No VAT is added anywhere. Your documents say INVOICE, not TAX INVOICE.') + '</div>' +
+    (isService() ? '<label>How clients should pay (printed on invoices)</label><input data-f="bTerms" placeholder="e.g. M-Pesa Till 123456, Equity A/c 0123…" value="' + esc(F.bTerms) + '">' : '') +
+    '<div class="row"><button class="go" id="saveBiz" style="flex:1">Save details</button></div></div>' +
+    (isService() ? '<div class="card"><h3>KRA eTIMS</h3>' + (b.etimsAvail
+      ? '<label class="chk"><input type="checkbox" id="etimsBox"' + (b.etims ? ' checked' : '') + '> Send my invoices to KRA automatically</label><div class="mu">Needs your KRA PIN above. Turn it on only when you are ready.</div>'
+      : (planLim().etims ? '<div class="mu">The automatic KRA connection is not switched on yet. Until it is, issue your KRA tax invoices through eTIMS Lite or the KRA portal as usual.</div>' : '<div class="mu">Automatic KRA eTIMS invoicing is part of the Pro plan. Until then, use eTIMS Lite or the KRA portal.</div>')) + '</div>' : '');
+  if (b.etimsAvail && isService()) { var eb = $('etimsBox'); if (eb) eb.onchange = function () { saveBusiness(true); }; }
+}
+async function saveBusiness(fromBox) {
+  var body = { action: 'saveSettings', pin: F.bPin.trim(), address: F.bAddress.trim(), phone: F.bPhone.trim(), terms: F.bTerms.trim(), type: F.bType.trim(), taxStatus: F.bTax === 'vat' ? 'vat' : 'none', vat: F.bTax === 'vat' ? 16 : 0,
+    etims: fromBox ? !!($('etimsBox') && $('etimsBox').checked) : !!biz().etims };
+  var j = await onlineAction(body, 'Saved');
+  if (j) { openBusiness(); render(true); } else if (fromBox) render(true);
+}
+
+function viewPriceList(head) {
+  var list = items().slice().sort(function (a, b) { return a.name.localeCompare(b.name); });
+  var form = '<div class="card"><h3>' + (priceEdit ? 'Change price' : 'Add a service or product') + '</h3>' +
+    '<div class="two"><div><label>Name</label><input data-f="pName" value="' + esc(F.pName) + '"></div><div><label>Usual price (KES)</label><input data-f="pPrice" type="number" inputmode="decimal" value="' + esc(F.pPrice) + '"></div></div>' +
+    '<div class="row">' + (priceEdit ? '<button class="ghost" id="cancelPrice">Cancel</button>' : '') + '<button class="go" id="savePrice">' + (priceEdit ? 'Save' : 'Add to price list') + '</button></div></div>';
+  $('main').innerHTML = head + '<div class="mu" style="margin-bottom:8px">Your usual services and prices. Tap one when making an invoice. You can still change the price on each invoice.</div>' + form +
+    '<div class="card"><h3>Price list</h3>' + (list.length ? list.map(function (i) {
+      return '<div class="kv"><span>' + esc(i.name) + '</span><span>' + kes(i.price) + ' <button class="ghost" data-pedit="' + esc(i.code) + '">Edit</button></span></div>'; }).join('') : '<div class="mu">Nothing yet. This is optional.</div>') + '</div>';
+}
+async function savePriceForm() {
+  var name = F.pName.trim(), price = Number(F.pPrice);
+  if (!name) { toast('Type the name'); return; }
+  if (F.pPrice === '' || !(price >= 0)) { toast('Type the price'); return; }
+  var body = { action: 'saveItem', name: name, category: 'Service', price: price, reorder: 0 };
+  if (priceEdit) body.code = priceEdit;
+  var j = await onlineAction(body, priceEdit ? 'Updated' : 'Added');
+  if (j) { priceEdit = null; F.pName = F.pPrice = ''; render(true); }
+}
+
+/* ---------- print the last sale's receipt (goods) ---------- */
+function lastSaleBar() {
+  if (!lastSale) return '';
+  return '<div class="ok" style="display:flex;justify-content:space-between;align-items:center;gap:8px"><span>Last sale ' + kes(lastSale.total) + '</span><button class="ghost" id="printRcpt">Receipt</button></div>';
+}
+
+/* ================= v4: IMPORTS, CURRENCIES, SCANNING, ACTIVITY ================= */
+var CURS = function () { return (S && S.plan && S.plan.currencies) || ['KES', 'USD', 'EUR', 'GBP']; };
+var money2c = function (n, cur) {
+  if (!cur || cur === 'KES') return money2(n);
+  return cur + ' ' + (Math.round((n || 0) * 100) / 100).toLocaleString('en-KE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+};
+var lastRate = function (cur) { try { return localStorage.getItem('rate_' + cur) || ''; } catch (e) { return ''; } };
+var keepRate = function (cur, r) { try { if (Number(r) > 0) localStorage.setItem('rate_' + cur, String(r)); } catch (e) {} };
+
+var shipId = null, shipCalc = null, shipBusy = false;
+var SH = { supplier: '', ref: '', cur: 'USD', rate: '', method: 'value', note: '', q: '', newName: '' };
+var shLines = [], shExtras = [{ type: 'Freight', amount: '', currency: 'USD', rate: '' }];
+var EXTRA_TYPES = ['Freight', 'Insurance', 'Duty', 'Clearing & port', 'Import VAT', 'Other'];
+
+function shipBody() {
+  return { supplier: SH.supplier.trim(), ref: SH.ref.trim(), currency: SH.cur, rate: SH.cur === 'KES' ? 1 : Number(SH.rate), method: SH.method, note: SH.note.trim(),
+    lines: shLines.map(function (l) { return { code: l.code, name: l.name, category: l.category, qty: Number(l.qty), price: Number(l.price), weight: Number(l.weight) || 0 }; }),
+    extras: shExtras.filter(function (e) { return Number(e.amount) > 0; }).map(function (e) { return { type: e.type, amount: Number(e.amount), currency: e.currency, rate: Number(e.rate) || 0 }; }) };
+}
+async function previewShip() {
+  if (!navigator.onLine) { toast('You need internet for this'); return; }
+  shipBusy = true; render(true);
+  try {
+    var j = await post(Object.assign({ token: KEY, action: 'previewShipment' }, shipBody()));
+    if (!j.ok) { toast(j.error || 'Could not work it out'); shipCalc = null; } else { shipCalc = j.calc; keepRate(SH.cur, SH.rate); }
+  } catch (e) { toast('Could not reach the server'); }
+  shipBusy = false; render(true);
+}
+async function saveShip() {
+  if (!SH.supplier.trim()) { toast('Type the supplier'); return; }
+  if (!shipId) shipId = uid();
+  var j = await onlineAction(Object.assign({ action: 'saveShipment', id: shipId }, shipBody()), 'Shipment saved. Costs are updated.');
+  if (j) { shipId = null; shipCalc = null; shLines = []; shExtras = [{ type: 'Freight', amount: '', currency: SH.cur, rate: '' }]; SH.ref = ''; SH.note = ''; render(true); }
+}
+
+function viewImport(head) {
+  if (!planLim().trade) { $('main').innerHTML = head + lockCard('Import shipments with landed cost', 'pro') + '<div class="card mu">Freight, duty and clearing are shared across the items in a shipment, so each item\'s cost (and your profit) is true. Works with USD, EUR, GBP and more, KES stays your main currency.</div>'; return; }
+  var cursOpt = function (v) { return CURS().map(function (c) { return '<option' + (c === v ? ' selected' : '') + '>' + c + '</option>'; }).join(''); };
+  var term = SH.q.trim().toLowerCase();
+  var hits = term ? items().filter(function (i) { return (i.name + ' ' + i.code + ' ' + (i.barcode || '')).toLowerCase().indexOf(term) > -1; }).slice(0, 5) : [];
+  var sup = ((S && S.suppliers) || []).map(function (n) { return '<option value="' + esc(n) + '">'; }).join('');
+  var html = head + '<div class="card"><h3>Import shipment</h3><div class="mu">Record what arrived, what you paid the supplier, and the extra costs. We share the extras across the items to get each item\'s real cost.</div>' +
+    '<label>Supplier</label><input data-sf="supplier" list="shsup" autocomplete="off" value="' + esc(SH.supplier) + '"><datalist id="shsup">' + sup + '</datalist>' +
+    '<div class="two"><div><label>Invoice / bill of lading no.</label><input data-sf="ref" value="' + esc(SH.ref) + '"></div><div><label>Supplier invoiced in</label><select data-sf="cur">' + cursOpt(SH.cur) + '</select></div></div>' +
+    (SH.cur !== 'KES' ? '<div class="two"><div><label>Exchange rate (KES for 1 ' + SH.cur + ')</label><input data-sf="rate" type="number" inputmode="decimal" value="' + esc(SH.rate) + '"></div><div></div></div>' : '') +
+    '<label>Share the extra costs by</label><select data-sf="method"><option value="value"' + (SH.method === 'value' ? ' selected' : '') + '>Value of the goods (usual)</option><option value="qty"' + (SH.method === 'qty' ? ' selected' : '') + '>Quantity</option><option value="weight"' + (SH.method === 'weight' ? ' selected' : '') + '>Weight</option></select></div>';
+  html += '<div class="card"><h3>Goods</h3><input data-sf="q" id="shq" type="search" placeholder="Search an item you stock" value="' + esc(SH.q) + '" autocomplete="off">' +
+    (hits.length ? '<div class="res">' + hits.map(function (i) { return '<button data-shadd="' + esc(i.code) + '"><span>' + esc(i.name) + '</span><span class="mu">cost ' + kes(i.cost) + '</span></button>'; }).join('') + '</div>' : '') +
+    '<div class="two" style="margin-top:8px"><input data-sf="newName" placeholder="Or a new item name" value="' + esc(SH.newName) + '"><button class="ghost" data-shnew="1">+ New item</button></div>' +
+    (shLines.length ? shLines.map(function (l, k) {
+      return '<div class="rl"><div class="t"><span>' + esc(l.name) + (l.code ? '' : ' <span class="pill">new</span>') + '</span><button class="ghost danger" data-shrm="' + k + '">✕</button></div>' +
+        '<div class="' + (SH.method === 'weight' ? 'three' : 'two') + '" style="margin-top:6px"><input data-sl="' + k + '" data-sk="qty" type="number" inputmode="decimal" placeholder="Quantity" value="' + esc(l.qty) + '">' +
+        '<input data-sl="' + k + '" data-sk="price" type="number" inputmode="decimal" placeholder="Price each (' + SH.cur + ')" value="' + esc(l.price) + '">' +
+        (SH.method === 'weight' ? '<input data-sl="' + k + '" data-sk="weight" type="number" inputmode="decimal" placeholder="kg each" value="' + esc(l.weight) + '">' : '') + '</div></div>';
+    }).join('') : '<div class="mu" style="margin-top:8px">Search above to add items.</div>') + '</div>';
+  html += '<div class="card"><h3>Extra costs</h3><div class="mu">Freight, insurance, duty, clearing and port charges. Import VAT is left out of cost if you are VAT-registered (you claim it back).</div>' +
+    shExtras.map(function (e, k) {
+      return '<div class="rl"><div class="two"><select data-se="' + k + '" data-sk="type">' + EXTRA_TYPES.map(function (t) { return '<option' + (t === e.type ? ' selected' : '') + '>' + t + '</option>'; }).join('') + '</select>' +
+        '<input data-se="' + k + '" data-sk="amount" type="number" inputmode="decimal" placeholder="Amount" value="' + esc(e.amount) + '"></div>' +
+        '<div class="two" style="margin-top:6px"><select data-se="' + k + '" data-sk="currency">' + cursOpt(e.currency) + '</select>' +
+        (e.currency !== 'KES' && e.currency !== SH.cur ? '<input data-se="' + k + '" data-sk="rate" type="number" inputmode="decimal" placeholder="KES for 1 ' + e.currency + '" value="' + esc(e.rate) + '">' : '<button class="ghost danger" data-serm="' + k + '">Remove</button>') + '</div></div>';
+    }).join('') + '<div class="row"><button class="ghost" id="addExtra" style="flex:1">+ Add a cost</button></div></div>';
+  html += '<div class="row"><button class="go" id="calcShip"' + (shipBusy ? ' disabled' : '') + '>Work out landed cost</button></div>';
+  if (shipCalc) {
+    var c = shipCalc;
+    html += '<div class="card"><h3>Landed cost</h3><div class="kpis">' + kpi('Goods', money2(c.goodsKes), c.cur !== 'KES' ? money2c(c.goodsFc, c.cur) : '') + kpi('Extra costs', money2(c.extraTotal), c.vatRec ? 'plus ' + money2(c.vatRec) + ' VAT to claim' : '') + kpi('Total landed', money2(c.landed), '', 'pos') + '</div>' +
+      '<table class="lines"><thead><tr><th>Item</th><th class="r">Qty</th><th class="r">Real cost each</th><th class="r">Extras added</th></tr></thead><tbody>' + c.lines.map(function (l) {
+        return '<tr><td>' + esc(l.name || (itemBy(l.code) || {}).name || l.code) + '</td><td class="r">' + l.qty + '</td><td class="r"><b>' + money2(l.unit) + '</b></td><td class="r">+' + l.pctOver + '%</td></tr>'; }).join('') + '</tbody></table>' +
+      '<div class="row"><button class="go" id="saveShip" style="flex:1">Save shipment and update stock</button></div></div>';
+  }
+  var past = (S && S.shipments) || [];
+  if (past.length) html += '<div class="card"><h3>Past shipments</h3>' + past.map(function (x) { return '<div class="kv"><span>' + esc(x.supplier) + '<br><span class="mu">' + esc(x.ref || '') + ' · ' + esc(new Date(x.t).toLocaleDateString('en-KE')) + (x.cur !== 'KES' ? ' · ' + x.cur + ' @ ' + x.rate : '') + '</span></span><span style="text-align:right"><b>' + kes(x.landed) + '</b><br><span class="mu">extras ' + kes(x.extras) + '</span></span></div>'; }).join('') + '</div>';
+  $('main').innerHTML = html;
+}
+
+/* ---------- barcode scanning (phones whose browser supports it) ---------- */
+async function openScanner(onCode) {
+  if (!('BarcodeDetector' in window) || !navigator.mediaDevices) { toast('Scanning is not supported on this phone. Type the item name instead.'); return; }
+  var stream;
+  try { stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } }); } catch (e) { toast('Allow the camera to scan'); return; }
+  var ov = document.createElement('div'); ov.className = 'scan';
+  ov.innerHTML = '<video playsinline muted></video><div class="scanbar"><span>Point the camera at the barcode</span><button class="ghost" id="scanX">Close</button></div>';
+  document.body.appendChild(ov);
+  var v = ov.querySelector('video'), alive = true;
+  v.srcObject = stream; try { await v.play(); } catch (e) {}
+  var det = new BarcodeDetector();
+  var stop = function () { alive = false; stream.getTracks().forEach(function (t) { t.stop(); }); ov.remove(); };
+  ov.querySelector('#scanX').onclick = stop;
+  (async function loop() {
+    while (alive) {
+      try { var r = await det.detect(v); if (r.length) { var code = r[0].rawValue; stop(); onCode(code); return; } } catch (e) {}
+      await new Promise(function (res) { setTimeout(res, 250); });
+    }
+  })();
+}
+function scannedForSale(code) {
+  var it = items().find(function (i) { return i.barcode === code || i.code === code; });
+  if (it) { addToCart(it.code); toast(it.name); } else toast('No item with barcode ' + code);
+}
+
+/* ---------- activity log (More) ---------- */
+function viewActivity(head) {
+  var a = (S && S.audit) || [];
+  $('main').innerHTML = head + '<div class="card"><h3>Who did what</h3>' + (a.length ? a.map(function (x) {
+    return '<div class="kv"><span>' + esc(x.detail) + '<br><span class="mu">' + esc(x.by) + ' · ' + esc(new Date(x.t).toLocaleString('en-KE', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })) + '</span></span></div>'; }).join('') : '<div class="mu">Nothing yet. Invoices, payments, price changes, imports and staff changes appear here.</div>') + '</div>' +
+    '<p class="mu">The full history is kept in your records Sheet (Audit tab).</p>';
+}
+
 /* ---------- events ---------- */
 document.addEventListener('click', function (e) {
   var b = e.target.closest('button, .kv[data-edit]'); if (!b) return;
   var d = b.dataset;
-  if (d.t) { tab = d.t; orderDone = null; render(true); }
+  if (d.t) { tab = d.t; orderDone = null; if (d.t === 'inv') { invSub = 'list'; } render(true); }
+  else if (d.goplan) { tab = 'more'; moreSub = 'plan'; moreTouched = true; render(true); window.scrollTo(0, 0); }
+  else if (d.ifilter) { invFilter = d.ifilter; render(true); }
+  else if (d.inv) { invView = d.inv; invSub = 'view'; F.ipAmt = ''; payAttemptId = null; tab = 'inv'; render(true); }
+  else if (d.addsvc) { var sv = itemBy(d.addsvc); if (sv) { var emptyL = invLines.length === 1 && !invLines[0].desc && invLines[0].rate === ''; var nl = { desc: sv.name, qty: '1', rate: String(sv.price) }; if (emptyL) invLines = [nl]; else invLines.push(nl); render(true); } }
+  else if (d.rmil !== undefined) { invLines.splice(Number(d.rmil), 1); if (!invLines.length) invLines = [{ desc: '', qty: '1', rate: '' }]; render(true); }
+  else if (d.period) { repPeriod = d.period; R = null; repTried = d.period === 'custom'; if (d.period === 'custom' && !F.repFrom) { F.repTo = ymd(new Date()); F.repFrom = periodRange('month')[0]; } render(true); }
+  else if (d.rtab) { repTab = d.rtab; render(true); }
+  else if (d.pedit) { var pe = itemBy(d.pedit); if (pe) { priceEdit = d.pedit; F.pName = pe.name; F.pPrice = String(pe.price); render(true); } }
   else if (d.code) addToCart(d.code);
   else if (d.cat !== undefined) { cat = d.cat; render(true); }
   else if (d.d) chg(d.c, Number(d.d));
@@ -814,7 +1450,7 @@ document.addEventListener('click', function (e) {
   else if (d.pay) { pay = d.pay; render(true); }
   else if (d.pm) { payM = d.pm; render(true); }
   else if (d.sub) { stockSub = d.sub; editCode = null; newItemOpen = false; render(true); }
-  else if (d.msub) { moreSub = d.msub; render(true); }
+  else if (d.msub) { moreSub = d.msub; moreTouched = true; if (d.msub === 'business') openBusiness(); render(true); }
   else if (d.payfor) { payFor = payFor === d.payfor ? null : d.payfor; render(true); }
   else if (d.recorder) recFromOrder(d.recorder);
   else if (d.addline) addLine(d.addline);
@@ -831,11 +1467,34 @@ document.addEventListener('click', function (e) {
   else if (d.copy) {
     try { navigator.clipboard.writeText(linkFor(d.copy)).then(function () { toast('Link copied'); }); } catch (x) { toast('Press and hold the link to copy'); }
   }
+  else if (b.id === 'scanSell') openScanner(scannedForSale);
+  else if (b.id === 'scanItem') openScanner(function (c) { F.iBar = c; render(true); });
+  else if (b.id === 'calcShip') previewShip();
+  else if (b.id === 'saveShip') saveShip();
+  else if (b.id === 'addExtra') { shExtras.push({ type: 'Duty', amount: '', currency: 'KES', rate: '' }); shipCalc = null; render(true); }
+  else if (d.shadd) { var si = itemBy(d.shadd); if (si && !shLines.some(function (l) { return l.code === si.code; })) shLines.push({ code: si.code, name: si.name, category: si.category, qty: '', price: '', weight: '' }); SH.q = ''; shipCalc = null; render(true); }
+  else if (d.shnew) { var nn = SH.newName.trim(); if (nn) { shLines.push({ code: '', name: nn, category: 'General', qty: '', price: '', weight: '' }); SH.newName = ''; shipCalc = null; render(true); } else toast('Type the new item name'); }
+  else if (d.shrm !== undefined) { shLines.splice(Number(d.shrm), 1); shipCalc = null; render(true); }
+  else if (d.serm !== undefined) { shExtras.splice(Number(d.serm), 1); shipCalc = null; render(true); }
+  else if (b.id === 'newInv') { invSub = 'new'; F.invVat = biz().taxStatus === 'vat' ? (F.invVat && F.invVat !== '0' ? F.invVat : String(biz().vat || 0)) : '0'; render(true); }
+  else if (b.id === 'cancelInvForm') { invSub = 'list'; render(true); }
+  else if (b.id === 'addInvLine') { invLines.push({ desc: '', qty: '1', rate: '' }); render(true); }
+  else if (b.id === 'saveInv') saveInvoiceForm();
+  else if (b.id === 'backInv') { invSub = 'list'; render(true); }
+  else if (b.id === 'payInv') payInvoiceForm();
+  else if (b.id === 'cancelInv') cancelInvoiceNow();
+  else if (b.id === 'printInv') { var pi = invList().find(function (i) { return i.no === invView; }); if (pi) printHtml(invoiceDoc(pi)); }
+  else if (b.id === 'runReport') { R = null; loadReport(); }
+  else if (b.id === 'printRep') { if (R) printHtml(reportDoc()); }
+  else if (b.id === 'saveBiz') saveBusiness(false);
+  else if (b.id === 'savePrice') savePriceForm();
+  else if (b.id === 'cancelPrice') { priceEdit = null; F.pName = F.pPrice = ''; render(true); }
+  else if (b.id === 'printRcpt') { if (lastSale) printHtml(receiptDoc(lastSale)); }
   else if (b.id === 'done') completeSale();
   else if (b.id === 'saveRec') saveDelivery();
   else if (b.id === 'savePay') savePayment();
   else if (b.id === 'addStaff') addStaff();
-  else if (b.id === 'newItemBtn') { newItemOpen = true; editCode = null; F.iName = F.iCat = F.iPrice = F.iCost = F.iOpen = ''; F.iReorder = '5'; render(true); }
+  else if (b.id === 'newItemBtn') { newItemOpen = true; editCode = null; F.iName = F.iCat = F.iPrice = F.iCost = F.iOpen = F.iBar = ''; F.iReorder = '5'; render(true); }
   else if (b.id === 'cancelItem') { newItemOpen = false; editCode = null; render(true); }
   else if (b.id === 'saveItemBtn') saveItemForm();
   else if (b.id === 'saveCounts') saveCounts();
@@ -857,10 +1516,16 @@ document.addEventListener('input', function (e) {
     usePts = Math.min(Math.max(0, Math.floor(Number(t.value) || 0)), maxPts());
     var pp = (S && S.points) || { value: 1 }, op = $('ordPay'); if (op) op.textContent = kes(ordTotal() - usePts * (pp.value || 1));
   }
+  else if (d.sf) { SH[d.sf] = t.value; shipCalc = null; if (d.sf === 'q') { render(true); var sq = $('shq'); if (sq) { sq.focus(); try { sq.setSelectionRange(sq.value.length, sq.value.length); } catch (x) {} } } }
+  else if (d.sl !== undefined) { shLines[Number(d.sl)][d.sk] = t.value; shipCalc = null; }
+  else if (d.se !== undefined) { shExtras[Number(d.se)][d.sk] = t.value; shipCalc = null; }
+  else if (d.il !== undefined) { invLines[Number(d.il)][d.ik] = t.value; var it2 = $('invTot'); if (it2) it2.innerHTML = invTotHtml(); }
   else if (d.li !== undefined) { recLines[Number(d.li)][d.k] = t.value; saveDraft(); }
   else if (d.cnt) counts[d.cnt] = t.value;
   else if (d.f) {
     F[d.f] = t.value;
+    if (d.f === 'invVat') { var tt = $('invTot'); if (tt) tt.innerHTML = invTotHtml(); }
+    else if (d.f === 'invClient') { var kc = (S.customers || []).find(function (c) { return c.name.toLowerCase() === t.value.trim().toLowerCase(); }); var ph = $('invPhone'); if (kc && kc.phone && ph && !ph.value) { ph.value = kc.phone; F.invPhone = kc.phone; } }
     if (d.f === 'recQ') { var rr = $('recRes'); if (rr) rr.innerHTML = recResults(); }
     else if (d.f === 'recSupplier') { saveDraft(); }
     else if (d.f === 'iq' || d.f === 'cq' || d.f === 'oq') { render(true); var el = $(d.f); if (el) { el.focus(); try { el.setSelectionRange(el.value.length, el.value.length); } catch (x) {} } }
@@ -869,6 +1534,12 @@ document.addEventListener('input', function (e) {
 document.addEventListener('change', function (e) {
   var t = e.target;
   if (t.dataset.f === 'recSupplier') render(true);   // shows the phone box only for a new supplier
+  else if (t.dataset.f === 'invVat') { F.invVat = t.value; }
+  else if (t.dataset.f === 'bTax') { F.bTax = t.value; render(true); }
+  else if (t.dataset.f === 'invCur') { F.invCur = t.value; if (t.value !== 'KES' && !F.invRate) F.invRate = lastRate(t.value); render(true); }
+  else if (t.dataset.sf === 'cur') { SH.cur = t.value; if (t.value !== 'KES' && !SH.rate) SH.rate = lastRate(t.value); shExtras.forEach(function (e) { if (e.currency !== 'KES') e.currency = t.value; }); render(true); }
+  else if (t.dataset.sf === 'method') { SH.method = t.value; render(true); }
+  else if (t.dataset.se !== undefined && (t.dataset.sk === 'currency' || t.dataset.sk === 'type')) { shExtras[Number(t.dataset.se)][t.dataset.sk] = t.value; render(true); }
 });
 window.addEventListener('online', sync);
 window.addEventListener('offline', renderStatus);
