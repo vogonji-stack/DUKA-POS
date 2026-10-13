@@ -126,6 +126,15 @@
   .doc .kpis{margin:8px 0}.doc .kpi{break-inside:avoid}
   .doc .seg i,.doc .hb .b i,.doc .legend b{-webkit-print-color-adjust:exact;print-color-adjust:exact}
   .scan{position:fixed;inset:0;background:#000;z-index:30;display:flex;flex-direction:column}.scan video{flex:1;width:100%;object-fit:cover}.scanbar{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:12px;background:#111;color:#fff}
+  .tbls{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}@media(min-width:520px){.tbls{grid-template-columns:repeat(3,1fr)}}
+  .tbl{border:2px solid var(--line);border-radius:16px;padding:12px;text-align:left;background:#fff;min-height:92px;color:var(--tx);display:flex;flex-direction:column;gap:3px;font-size:15px}.tbl b{font-size:17px}
+  .tbl.free{border-style:dashed;color:var(--mu)}.tbl.busy{border-color:#f1d58a;background:#fffaf0}.tbl.rdy{border-color:var(--g);background:var(--gl)}
+  .pill.stsent{background:var(--amb-l);color:var(--amb)}.pill.stready{background:var(--gl);color:var(--gd)}.pill.stserved{background:#e8f0ff;color:#1d4ed8}.pill.stvoid{background:#fde8e6;color:var(--red)}
+  .kcard{background:#fff;border:2px solid #f1d58a;border-radius:16px;padding:12px;margin-bottom:10px}.kcard.late{border-color:var(--red);background:#fff5f4}.kcard.done{border-color:var(--g);background:var(--gl)}
+  .kh{display:flex;justify-content:space-between;gap:8px;margin-bottom:6px;font-size:14px;color:var(--mu)}.kh b{font-size:19px;color:var(--tx)}
+  .kl{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:9px 0;border-top:1px solid #f0e6c8;font-size:18px}.kl.ready{color:var(--gd)}.knote{font-size:14px;color:var(--red);font-weight:700}
+  .pill.clsStar{background:var(--gl);color:var(--gd)}.pill.clsPlowhorse{background:var(--amb-l);color:var(--amb)}.pill.clsPuzzle{background:#e8f0ff;color:#1d4ed8}.pill.clsDog{background:#fde8e6;color:var(--red)}
+  .doc .pill{-webkit-print-color-adjust:exact;print-color-adjust:exact}
 </style>
 </head>
 <body>
@@ -425,7 +434,7 @@ async function addStaff() {
   if (!name) { toast('Type the cashier name'); return; }
   if (!navigator.onLine) { toast('You need internet to add a cashier'); return; }
   try {
-    var j = await post({ token: KEY, action: 'addStaff', name: name });
+    var j = await post({ token: KEY, action: 'addStaff', name: name, role: isRest() && F.sRole === 'Kitchen' ? 'Kitchen' : 'Cashier' });
     if (!j.ok) { toast(j.error || 'Could not add'); return; }
     newLink = { name: j.name, key: j.key };
     await loadState(); render(true);
@@ -510,6 +519,12 @@ function todayNums() {
 
 /* ---------- screens ---------- */
 function tabs() {
+  if (isRest()) {
+    var kt = kitchenOn() ? [['kitchen', 'Kitchen']] : [];
+    if (S.role === 'kitchen') return [['kitchen', 'Kitchen']];
+    if (S.role !== 'owner') return [['tables', 'Tables']].concat(kt, [['credit', 'Credit'], ['today', 'Today']]);
+    return [['tables', 'Tables']].concat(kt, [['stock', 'Stock'], ['credit', 'Credit'], ['today', 'Today'], ['report', 'Reports'], ['more', 'More']]);
+  }
   if (!v2()) return [['sell', 'Sell'], ['stock', 'Receive stock'], ['today', 'Today']];
   if (S.role !== 'owner') return isService() ? [['inv', 'Invoices'], ['owed', 'Owed']] : [['sell', 'Sell'], ['credit', 'Credit'], ['today', 'Today']];
   if (!v3()) return [['sell', 'Sell'], ['stock', 'Stock'], ['credit', 'Credit'], ['today', 'Today'], ['more', 'Team']];
@@ -542,6 +557,7 @@ function render(force) {
   if (tab === 'sell') viewSell(); else if (tab === 'stock') viewStock(); else if (tab === 'credit') viewCredit();
   else if (tab === 'order') viewOrder(); else if (tab === 'today') viewToday(); else if (tab === 'more') viewMore();
   else if (tab === 'inv') viewInvoices(); else if (tab === 'owed') viewOwed(); else if (tab === 'report') viewReports();
+  else if (tab === 'tables') viewTables(); else if (tab === 'kitchen') viewKitchen();
   renderCart();
 }
 
@@ -573,6 +589,7 @@ function changeText() {
 function renderCart() {
   var el = $('cart');
   if (tab === 'order') { renderOrderBar(el); return; }
+  if (isRest() && tab === 'tables') { renderBillBar(el); return; }
   var codes = Object.keys(cart);
   if (tab !== 'sell' || !codes.length) { el.style.display = 'none'; return; }
   var total = cartTotal();
@@ -778,9 +795,11 @@ function viewToday() {
   var n = todayNums(), t = n.t, owner = isOwner();
   var owed = 0; if (v2()) debtorsNow().forEach(function (d) { owed += d.balance; });
   var net = t.profit - t.exp;
+  var html0 = '';
   var html = '<div class="hero"><div class="hi">' + greet() + (v2() && S.role !== 'owner' ? ', ' + esc(S.who) : '') + '</div>' +
     '<div class="amt">' + kes(t.sales) + '</div><div class="sub">' + (owner ? 'Shop sales today · all phones' : 'My sales today') + '</div>' +
     (owner ? '<div class="sub" style="margin-top:6px">Profit ≈ ' + kes(t.profit) + (v3() ? ' · after expenses ' + kes(net) : '') + '</div>' : '') + '</div>';
+  if (isRest()) html += restTodayCard();
   html += '<div class="card"><h3>How it was paid</h3>' +
     '<div class="kv"><span>Cash</span><b>' + kes(t.cash) + '</b></div><div class="kv"><span>M-Pesa</span><b>' + kes(t.mpesa) + '</b></div>' +
     (v2() ? '<div class="kv"><span>On credit</span><b>' + kes(t.credit) + '</b></div><div class="kv"><span>Debts paid today</span><b>' + kes(t.collected) + '</b></div>' : '') + '</div>';
@@ -820,10 +839,12 @@ function viewToday() {
 function viewMore() {
   var subs = v3() ? [['expenses', 'Expenses'], ['team', 'Team']] : [['team', 'Team']];
   if (v4()) subs = [['business', 'Business']].concat(isService() ? [['prices', 'Price list']] : [], subs, [['activity', 'Activity'], ['plan', 'Plan']]);
+  if (isRest()) subs = [['menu', 'Menu'], ['tables', 'Tables'], ['business', 'Business'], ['expenses', 'Expenses'], ['team', 'Team'], ['activity', 'Activity'], ['plan', 'Plan']];
   if (!v3()) moreSub = 'team';
+  if (isRest() && !moreTouched && !restS().menu.length) moreSub = 'menu';
   if (v4() && isService() && !moreTouched && !biz().pin) moreSub = 'business';
   var head = '<div class="chips">' + subs.map(function (s) { return '<button class="chip' + (moreSub === s[0] ? ' on' : '') + '" data-msub="' + s[0] + '">' + s[1] + '</button>'; }).join('') + '</div>';
-  if (moreSub === 'team') viewTeam(head); else if (moreSub === 'business') viewBusiness(head); else if (moreSub === 'prices') viewPriceList(head); else if (moreSub === 'plan') viewPlan(head); else if (moreSub === 'activity') viewActivity(head); else viewExpenses(head);
+  if (moreSub === 'team') viewTeam(head); else if (moreSub === 'business') viewBusiness(head); else if (moreSub === 'prices') viewPriceList(head); else if (moreSub === 'menu') viewMenuAdmin(head); else if (moreSub === 'tables') viewTablesAdmin(head); else if (moreSub === 'plan') viewPlan(head); else if (moreSub === 'activity') viewActivity(head); else viewExpenses(head);
 }
 
 function viewExpenses(head) {
@@ -848,11 +869,12 @@ function viewTeam(head) {
     '<div class="row"><a class="ghost" style="text-decoration:none" target="_blank" rel="noopener" href="https://wa.me/?text=' + encodeURIComponent('Open your Duka POS: ' + linkFor(newLink.key)) + '">Send on WhatsApp</a>' +
     '<button class="ghost" data-copy="' + esc(newLink.key) + '">Copy link</button></div></div>' : '';
   $('main').innerHTML = (head || '') + box + '<div class="card"><h3>Add a cashier</h3>' +
-    '<div class="mu">' + (isService() ? 'A staff phone can make invoices and record payments. It cannot see reports, cancel invoices or change settings.' : 'A cashier phone can sell and record credit payments. It cannot see profit or costs, or receive stock.') + '</div>' +
-    '<label>Cashier name</label><input id="sn" placeholder="e.g. Mary" maxlength="40">' +
+    '<div class="mu">' + (isRest() ? 'A waiter phone takes orders and bills but cannot see profit or reports. A kitchen phone sees only the kitchen screen: dishes and tables, no money.' : isService() ? 'A staff phone can make invoices and record payments. It cannot see reports, cancel invoices or change settings.' : 'A cashier phone can sell and record credit payments. It cannot see profit or costs, or receive stock.') + '</div>' +
+    (isRest() ? '<label>Role</label><select data-f="sRole"><option value="Cashier"' + (F.sRole !== 'Kitchen' ? ' selected' : '') + '>Waiter / till</option><option value="Kitchen"' + (F.sRole === 'Kitchen' ? ' selected' : '') + '>Kitchen phone' + (kitchenOn() ? '' : ' (Standard plan)') + '</option></select>' : '') +
+    '<label>' + (isRest() ? 'Name' : 'Cashier name') + '</label><input id="sn" placeholder="e.g. Mary" maxlength="40">' +
     '<div class="row"><button class="go" id="addStaff">Add cashier</button></div></div>' +
     '<div class="card"><h3>Cashiers</h3>' + (staff.length ? staff.map(function (s) {
-      return '<div class="kv"><span>' + esc(s.name) + '<br><span class="mu">' + esc(s.status) + '</span></span><span>' +
+      return '<div class="kv"><span>' + esc(s.name) + '<br><span class="mu">' + esc(s.role === 'Kitchen' ? 'Kitchen · ' : '') + esc(s.status) + '</span></span><span>' +
         '<button class="ghost" data-showlink="' + esc(s.key) + '" data-nm="' + esc(s.name) + '">Link</button> ' +
         '<button class="ghost" data-staffkey="' + esc(s.key) + '" data-to="' + (s.status === 'Active' ? 'Inactive' : 'Active') + '">' + (s.status === 'Active' ? 'Stop' : 'Allow') + '</button></span></div>';
     }).join('') : '<div class="mu">No cashiers yet</div>') + '</div>' +
@@ -1097,7 +1119,7 @@ async function loadReport() {
 
 var trow = function (a, b, cls) { return '<tr' + (cls ? ' class="' + cls + '"' : '') + '><td>' + a + '</td><td class="r">' + b + '</td></tr>'; };
 function repTitle() {
-  var m = { income: 'Income statement', money: 'Money in and out', position: 'Business position', owed: 'Who owes you', stock: 'Stock valuation', items: 'Sales by item', vat: 'VAT on invoices' };
+  var m = { menu: 'Menu performance', income: 'Income statement', money: 'Money in and out', position: 'Business position', owed: 'Who owes you', stock: 'Stock valuation', items: 'Sales by item', vat: 'VAT on invoices' };
   return m[repTab] || '';
 }
 /* ---------- small chart pieces (screen and print) ---------- */
@@ -1110,7 +1132,9 @@ var ICON = {
   report: '<path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5"/><path d="M9 14h7M9 17h5"/>',
   more: '<circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/>',
   inv: '<path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6"/>',
-  owed: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>'
+  owed: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+  tables: '<rect x="3" y="9" width="18" height="4" rx="1"/><path d="M6 13v7M18 13v7M12 5v4"/>',
+  kitchen: '<path d="M6 14a4 4 0 1 1 3-6.6A4 4 0 0 1 15 7a4 4 0 0 1 3 7z"/><path d="M7 14v6h10v-6"/>'
 };
 var icon = function (n) { return ICON[n] ? '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' + ICON[n] + '</svg>' : ''; };
 
@@ -1239,6 +1263,8 @@ function reportDoc() {
     body += '<div class="sec">Most profit</div>' + hBars(r.items.slice(0, 8).map(function (i) { return { name: i.name, value: Math.max(0, i.profit) }; }), '#0f766e') +
       '<table class="lines"><thead><tr><th>Item</th><th class="r">Sold</th><th class="r">Sales</th><th class="r">Profit</th></tr></thead><tbody>' + (r.items.length ? r.items.map(function (i) {
         return '<tr><td>' + esc(i.name) + '</td><td class="r">' + i.qty + '</td><td class="r">' + money2(i.revenue) + '</td><td class="r">' + money2(i.profit) + '</td></tr>'; }).join('') : '<tr><td colspan="4">No sales in this period.</td></tr>') + '</tbody></table><p class="note">Top 40 items by profit.</p>';
+  } else if (repTab === 'menu') {
+    var mr = menuReportBody(r); tiles = mr.tiles; body = mr.body;
   } else if (repTab === 'vat') {
     var v = r.vat;
     tiles = '<div class="kpis">' + kpi('Before VAT', money2(v.sub), v.list.length + ' invoices') + kpi('VAT charged', money2(v.vat), '', 'pos') + '</div>';
@@ -1253,7 +1279,7 @@ function viewReports() {
   if (!isOwner()) { $('main').innerHTML = '<div class="card mu">Reports are for the owner.</div>'; return; }
   var lim = planLim();
   var periods = [['today', 'Today'], ['week', 'This week'], ['month', 'This month'], ['last', 'Last month'], ['30', 'Last 30 days'], ['custom', 'Pick dates']];
-  var tabsR = isService() ? [['income', 'Income'], ['money', 'Money'], ['owed', 'Owed']].concat(biz().taxStatus === 'vat' ? [['vat', 'VAT']] : [], [['position', 'Position']])
+  var tabsR = isRest() ? [['income', 'Income'], ['money', 'Money'], ['menu', 'Menu'], ['stock', 'Stock'], ['owed', 'Owed'], ['position', 'Position']] : isService() ? [['income', 'Income'], ['money', 'Money'], ['owed', 'Owed']].concat(biz().taxStatus === 'vat' ? [['vat', 'VAT']] : [], [['position', 'Position']])
                           : [['income', 'Income'], ['money', 'Money'], ['items', 'By item'], ['stock', 'Stock'], ['owed', 'Owed'], ['position', 'Position']];
   if (!tabsR.some(function (t) { return t[0] === repTab; })) repTab = 'income';
   var locked = lim.reports.indexOf(repTab) < 0, customLocked = repPeriod === 'custom' && !lim.customDates;
@@ -1430,6 +1456,414 @@ function viewActivity(head) {
     '<p class="mu">The full history is kept in your records Sheet (Audit tab).</p>';
 }
 
+
+/* ================= v6: RESTAURANT ================= */
+var isRest = function () { return !!(S && S.mode === 'restaurant'); };
+var isKitchen = function () { return !!(S && S.role === 'kitchen'); };
+var restS = function () { return (S && S.rest) || { tables: [], service: 0, menu: [], open: [], today: {}, week: {} }; };
+var kitchenOn = function () { return !!planLim().kitchen; };
+var O = null;                                   // newest open bills from the server (polled)
+var tkSub = 'tables', draft = null, tkCat = 'All', payRows = null, paidBill = null, kStation = 'all', tkBusy = false, lastOrdersSig = '', pollN = 0;
+var seenLids = null, dishEdit = null, dishRecipe = [];
+Object.assign(F, { tkQ: '', sRole: 'Cashier', mdName: '', mdCat: '', mdPrice: '', mdStation: 'kitchen', mdManual: '', mdActive: 'Yes', tbNames: '', tbSvc: '0' });
+try { draft = JSON.parse(localStorage.getItem('tk_' + KEY) || 'null'); if (draft && draft.lines) tkSub = 'bill'; else draft = null; } catch (e) { draft = null; }
+var saveTk = function () { try { if (draft) localStorage.setItem('tk_' + KEY, JSON.stringify(draft)); else localStorage.removeItem('tk_' + KEY); } catch (e) {} };
+
+function tickets() { return O ? O.tickets : restS().open; }
+function tablesList() { return (O && O.tables) || restS().tables || []; }
+function dishes() { return restS().menu.filter(function (d) { return d.active; }); }
+function dishBy(code) { return restS().menu.find(function (d) { return d.code === code; }); }
+function ticketBy(id) { return tickets().find(function (t) { return t.id === id; }); }
+var minsAgo = function (ms) { return Math.max(0, Math.floor((Date.now() - ms) / 60000)); };
+var c100 = function (n) { return Math.round((Number(n) || 0) * 100); };
+
+/** Bill totals in cents, the same sum the server does. */
+function billCents(lines) {
+  var sub = 0; lines.forEach(function (l) { if (l.status !== 'void') sub += c100(l.price) * l.qty; });
+  var service = Math.round(sub * (restS().service || 0) / 100);
+  return { sub: sub, service: service, total: sub + service };
+}
+function draftLines() { return (draft ? draft.lines : []).map(function (l) { var d = dishBy(l.code) || { price: 0, name: l.code }; return { lid: l.lid, code: l.code, name: d.name, price: d.price, qty: l.qty, note: l.note, status: 'new' }; }); }
+function allBillLines() { var t = draft && ticketBy(draft.id); return (t ? t.lines : []).concat(draftLines()); }
+
+function mergeTicket(t) {
+  if (!O) O = { tickets: tickets().slice(), tables: tablesList() };
+  O.tickets = O.tickets.filter(function (x) { return x.id !== t.id; });
+  if (t.status === 'Open') O.tickets.push(t);
+}
+
+/* ---------- talking to the server (light calls: no full reload) ---------- */
+async function tkPost(obj) {
+  if (!navigator.onLine) { toast('You need internet for this'); return null; }
+  try {
+    var j = await post(Object.assign({ token: KEY }, obj));
+    if (!j.ok) { toast(j.error || 'Could not save'); return null; }
+    return j;
+  } catch (e) { toast('Could not reach the server. Nothing was lost, tap again.'); return null; }
+}
+function beep() {
+  try { var ac = new (window.AudioContext || window.webkitAudioContext)(), o = ac.createOscillator(), g = ac.createGain(); o.connect(g); g.connect(ac.destination); o.frequency.value = 880; g.gain.value = 0.15; o.start(); o.stop(ac.currentTime + 0.18); } catch (e) {}
+  try { if (navigator.vibrate) navigator.vibrate(150); } catch (e) {}
+}
+async function pollOrders() {
+  if (!isRest() || !API || !navigator.onLine || document.hidden) return;
+  if (!(tab === 'tables' || tab === 'kitchen')) return;
+  pollN++;
+  try {
+    var r = await fetch(API + '?token=' + encodeURIComponent(KEY) + '&view=orders'), j = await r.json();
+    if (!j.ok) return;
+    O = j;
+    if (isKitchen() || isOwner()) {
+      var cur = {}, fresh = false;
+      j.tickets.forEach(function (t) { t.lines.forEach(function (l) { cur[l.lid] = 1; if (seenLids && !seenLids[l.lid] && l.status === 'sent') fresh = true; }); });
+      seenLids = cur; if (fresh && tab === 'kitchen') beep();
+    }
+    var sig = JSON.stringify(j.tickets);
+    if (sig !== lastOrdersSig || (tab === 'kitchen' && pollN % 4 === 0)) { lastOrdersSig = sig; render(false); }
+  } catch (e) {}
+}
+
+/* ---------- tables ---------- */
+function newDraft(table) { draft = { id: uid(), table: table, covers: '', note: '', lines: [] }; tkSub = 'bill'; tkCat = 'All'; F.tkQ = ''; saveTk(); render(true); }
+function openBill(id) { var t = ticketBy(id); if (!t) return; draft = { id: t.id, table: t.table, covers: t.covers || '', note: t.note || '', lines: [] }; tkSub = 'bill'; tkCat = 'All'; F.tkQ = ''; saveTk(); render(true); }
+function closeBill() { if (draft && !draft.lines.length) draft = null; tkSub = 'tables'; saveTk(); render(true); }
+
+function viewTables() {
+  if (tkSub === 'bill') return viewBill();
+  if (tkSub === 'pay') return viewPay();
+  if (tkSub === 'paid') return viewPaid();
+  var list = tickets(), names = tablesList(), html = '';
+  var ready = 0; list.forEach(function (t) { t.lines.forEach(function (l) { if (l.status === 'ready') ready++; }); });
+  if (ready) html += '<div class="ok"><b>' + ready + ' dish' + (ready > 1 ? 'es are' : ' is') + ' ready to serve</b></div>';
+  var tile = function (t, name) {
+    if (!t) return '<button class="tbl free" data-tb="' + esc(name) + '"><b>' + esc(name) + '</b><span class="mu">Free</span></button>';
+    var rd = t.lines.filter(function (l) { return l.status === 'ready'; }).length, n = t.lines.filter(function (l) { return l.status !== 'void'; }).length;
+    return '<button class="tbl busy' + (rd ? ' rdy' : '') + '" data-tbill="' + esc(t.id) + '"><b>' + esc(t.table) + '</b><span>' + kes(t.total) + '</span><span class="mu">' + n + ' dish' + (n === 1 ? '' : 'es') + ' · ' + minsAgo(t.t) + ' min' + '</span>' + (rd ? '<span class="grn">' + rd + ' ready</span>' : '') + '</button>';
+  };
+  var tiles = '';
+  names.forEach(function (n) {
+    var bs = list.filter(function (t) { return t.table === n; });
+    if (!bs.length) tiles += tile(null, n); else bs.forEach(function (t) { tiles += tile(t); });
+  });
+  list.filter(function (t) { return names.indexOf(t.table) < 0; }).forEach(function (t) { tiles += tile(t); });
+  html += '<div class="row" style="margin:0 0 8px"><button class="go" id="tkNew" style="flex:1">+ Takeaway / new bill</button></div>';
+  if (!names.length && isOwner()) html += '<div class="warn">Name your tables in <b>More › Tables</b>. Until then use “Takeaway / new bill”.</div>';
+  html += '<div class="tbls">' + tiles + '</div>';
+  if (!tiles) html += '<div class="card mu">No open bills.</div>';
+  $('main').innerHTML = html;
+}
+
+/* ---------- the bill ---------- */
+function viewBill() {
+  if (!draft) { tkSub = 'tables'; return viewTables(); }
+  var t = ticketBy(draft.id), sent = t ? t.lines : [], dl = draftLines();
+  var cents = billCents(sent.concat(dl)), live = sent.filter(function (l) { return l.status !== 'void'; });
+  var tbl = tablesList(), svc = restS().service || 0;
+  var menu = dishes(), cats = ['All'].concat(menu.map(function (d) { return d.category; }).filter(function (v, i, a) { return a.indexOf(v) === i; }));
+  var term = F.tkQ.trim().toLowerCase();
+  var shown = menu.filter(function (d) { return (tkCat === 'All' || d.category === tkCat) && (!term || d.name.toLowerCase().indexOf(term) > -1); });
+  var stPill = { sent: 'Cooking', ready: 'Ready', served: 'Served', void: 'Cancelled' };
+  var html = '<div class="row" style="margin:0 0 8px"><button class="ghost" id="tkBack">‹ Tables</button><b style="flex:1;text-align:center">Table ' + esc(draft.table) + (t ? ' · ' + esc(t.no) : ' · new bill') + '</b>' +
+    '<select id="tkMove" style="width:auto;padding:8px"><option value="">Move…</option>' + tbl.concat(['Takeaway']).filter(function (n) { return n !== draft.table; }).map(function (n) { return '<option>' + esc(n) + '</option>'; }).join('') + '</select></div>';
+  html += '<div class="two"><div><label>Guests</label><input data-f="tkCovers" id="tkCovers" type="number" inputmode="numeric" min="0" value="' + esc(draft.covers) + '"></div><div><label>Bill note</label><input id="tkNote" value="' + esc(draft.note || '') + '" placeholder="optional" maxlength="100"></div></div>';
+  if (sent.length) html += '<div class="card"><h3>Sent to the kitchen</h3>' + sent.map(function (l) {
+    var rowCls = l.status === 'void' ? ' style="opacity:.45;text-decoration:line-through"' : '';
+    return '<div class="kv" style="align-items:center"><span' + rowCls + '>' + l.qty + ' × ' + esc(l.name) + (l.note ? '<br><span class="mu">' + esc(l.note) + '</span>' : '') + '<br><span class="pill st' + l.status + '">' + stPill[l.status] + '</span></span><span style="text-align:right;white-space:nowrap">' + kes(l.price * l.qty) + '<br>' +
+      (l.status === 'ready' || (l.status === 'sent' && !kitchenOn()) ? '<button class="ghost" data-ks="' + esc(t.id + '|' + l.lid + '|served') + '">Served</button> ' : '') +
+      (l.status !== 'void' ? '<button class="ghost danger" data-vl="' + esc(t.id + '|' + l.lid) + '">✕</button>' : '') + '</span></div>';
+  }).join('') + '</div>';
+  if (dl.length) html += '<div class="card"><h3>New, not sent yet</h3>' + draft.lines.map(function (l, k) {
+    var d = dishBy(l.code) || { name: l.code, price: 0 };
+    return '<div class="rl"><div class="line"><span class="n">' + esc(d.name) + '</span><button class="q" data-dq="' + k + '|-1">−</button><b>' + l.qty + '</b><button class="q" data-dq="' + k + '|1">+</button><span style="width:78px;text-align:right">' + kes(d.price * l.qty) + '</span></div>' +
+      '<input data-dn="' + k + '" placeholder="Note for the kitchen (no onions, well done…)" maxlength="60" value="' + esc(l.note || '') + '"></div>';
+  }).join('') + '</div>';
+  html += '<div class="card"><h3>Menu</h3><input id="tkq" type="search" placeholder="Search a dish" value="' + esc(F.tkQ) + '" autocomplete="off">' +
+    '<div class="chips">' + cats.map(function (c) { return '<button class="chip' + (c === tkCat ? ' on' : '') + '" data-tcat="' + esc(c) + '">' + esc(c) + '</button>'; }).join('') + '</div>' +
+    '<div class="grid">' + shown.map(function (d) {
+      return '<button class="item" data-dish="' + esc(d.code) + '"><b>' + esc(d.name) + '</b><span class="p">' + kes(d.price) + '</span>' + (d.low ? '<span class="s low">Check stock</span>' : (d.station === 'bar' ? '<span class="s">Bar</span>' : '')) + '</button>';
+    }).join('') + '</div>' + (menu.length ? '' : '<p class="mu">' + (isOwner() ? 'No dishes yet. Add them in More › Menu.' : 'No dishes yet. Ask the owner to add the menu.') + '</p>') + '</div>';
+  var lock = '';
+  $('main').innerHTML = html + lock;
+}
+function renderBillBar(el) {
+  if (tkSub !== 'bill' || !draft) { el.style.display = 'none'; return; }
+  var t = ticketBy(draft.id), dl = draft.lines, cents = billCents(allBillLines()), svc = restS().service || 0;
+  var live = t ? t.lines.filter(function (l) { return l.status !== 'void'; }).length : 0;
+  el.style.display = 'block';
+  el.innerHTML = '<div class="kv"><span class="mu">' + (svc ? 'Service ' + svc + '% ' + kes(cents.service / 100) : '') + '</span><span class="total">' + kes(cents.total / 100) + '</span></div>' +
+    '<div class="row">' + (dl.length ? '<button class="ghost" id="tkPrintK">Print order</button><button class="go gold" id="tkSend"' + (tkBusy ? ' disabled' : '') + '>Send to kitchen (' + dl.reduce(function (a, l) { return a + l.qty; }, 0) + ')</button>'
+      : '<button class="ghost" id="tkPrintB"' + (live ? '' : ' disabled') + '>Print bill</button><button class="go" id="tkPay"' + (live ? '' : ' disabled') + '>Take payment</button>') + '</div>';
+}
+async function sendDraft() {
+  if (!draft || !draft.lines.length || tkBusy) return;
+  if (!navigator.onLine) { toast('Sending needs internet. Use “Print order” for the kitchen.'); return; }
+  tkBusy = true; render(true);
+  var j = await tkPost({ action: 'saveTicket', id: draft.id, table: draft.table, covers: Number(draft.covers) || 0, note: draft.note || '',
+    lines: draft.lines.map(function (l) { return { lid: l.lid, code: l.code, qty: l.qty, note: l.note || '' }; }) });
+  tkBusy = false;
+  if (j) { mergeTicket(j.ticket); draft.lines = []; saveTk(); toast('Sent to the kitchen'); }
+  render(true);
+}
+async function moveBill(table) {
+  var t = ticketBy(draft.id);
+  if (!t) { draft.table = table; saveTk(); render(true); return; }
+  var j = await tkPost({ action: 'moveTicket', ticket: t.id, table: table });
+  if (j) { mergeTicket(j.ticket); draft.table = table; saveTk(); toast('Moved to ' + table); }
+  render(true);
+}
+async function lineAction(tid, lid, status) {
+  var j = await tkPost({ action: 'lineStatus', ticket: tid, lid: lid, status: status });
+  if (j) { mergeTicket(j.ticket); render(true); }
+}
+async function voidLineAsk(tid, lid) {
+  var reason = prompt('Why is this dish cancelled? (for example: customer changed mind)');
+  if (!reason) return;
+  var j = await tkPost({ action: 'voidLine', ticket: tid, lid: lid, reason: reason });
+  if (j) { mergeTicket(j.ticket); toast(j.wasted ? 'Cancelled. It was already made, so the ingredients are written off.' : 'Dish cancelled'); render(true); }
+}
+function kitchenDoc(t, lines) {
+  return '<div class="doc rcpt"><div class="dt">KITCHEN ORDER</div><div><b>Table ' + esc(t.table) + '</b>' + (t.no ? ' · ' + esc(t.no) : '') + '</div><div>' + esc(new Date().toLocaleTimeString('en-KE', { hour: '2-digit', minute: '2-digit' })) + (t.waiter ? ' · ' + esc(t.waiter) : '') + '</div>' +
+    '<table class="lines"><tbody>' + lines.map(function (l) { return '<tr><td style="font-size:16px"><b>' + l.qty + ' ×</b> ' + esc(l.name) + (l.station === 'bar' ? ' <span class="mu">(bar)</span>' : '') + (l.note ? '<br><span class="mu">' + esc(l.note) + '</span>' : '') + '</td></tr>'; }).join('') + '</tbody></table></div>';
+}
+function billDoc(t, paid) {
+  var lines = t.lines.filter(function (l) { return l.status !== 'void'; }), b = biz();
+  return '<div class="doc rcpt">' + docHeader() + '<div class="dt">' + (paid ? 'RECEIPT' : 'BILL') + '</div><div>Table ' + esc(t.table) + ' · ' + esc(t.no) + '</div><div>' + esc(new Date(paid && t.closed ? t.closed : Date.now()).toLocaleString('en-KE')) + (t.waiter ? ' · ' + esc(t.waiter) : '') + '</div>' +
+    '<table class="lines"><tbody>' + lines.map(function (l) { return '<tr><td>' + esc(l.name) + '<br><span class="mu">' + l.qty + ' × ' + money2(l.price) + '</span></td><td class="r">' + money2(l.price * l.qty) + '</td></tr>'; }).join('') + '</tbody></table>' +
+    '<table class="tot"><tr><td>Subtotal</td><td class="r">' + money2(t.sub) + '</td></tr>' + (t.service > 0 ? '<tr><td>Service charge</td><td class="r">' + money2(t.service) + '</td></tr>' : '') +
+    '<tr class="g"><td>Total</td><td class="r">' + money2(t.total) + '</td></tr>' +
+    (paid ? (t.paidWith || []).map(function (p) { return '<tr><td>Paid by ' + esc(p.m) + (p.c ? ' (' + esc(p.c) + ')' : '') + '</td><td class="r">' + money2(p.a) + '</td></tr>'; }).join('') : '') + '</table>' +
+    (b.taxStatus === 'vat' && b.vat ? '<p class="terms">Prices include VAT ' + b.vat + '%.</p>' : '') + '<p class="foot">' + (paid ? 'Thank you, karibu tena!' : 'Please pay at the till. Thank you!') + '</p></div>';
+}
+
+/* ---------- payment ---------- */
+function openPay() {
+  var t = draft && ticketBy(draft.id); if (!t) return;
+  payRows = [{ method: 'Cash', amount: '', customer: '', phone: '' }]; tkSub = 'pay'; render(true);
+}
+function payTotals() {
+  var t = ticketBy(draft.id), tot = billCents(t ? t.lines : []).total, sum = 0;
+  payRows.forEach(function (r) { sum += c100(r.amount); });
+  return { tot: tot, sum: sum, left: tot - sum };
+}
+function payStatusHtml() {
+  var p = payTotals();
+  return p.left === 0 ? '<span class="grn">Matches the bill ✓</span>' : p.left > 0 ? '<span class="amb">Still to pay ' + kes(p.left / 100) + '</span>' : '<span class="red">Too much by ' + kes(-p.left / 100) + '</span>';
+}
+function viewPay() {
+  var t = draft && ticketBy(draft.id);
+  if (!t || !payRows) { tkSub = 'tables'; return viewTables(); }
+  var p = payTotals(), names = {}; ((S && S.customers) || []).forEach(function (c) { names[c.name] = 1; });
+  var html = '<div class="row" style="margin:0 0 8px"><button class="ghost" id="payBack">‹ Back to bill</button><b style="flex:1;text-align:center">Table ' + esc(t.table) + ' · ' + esc(t.no) + '</b></div>' +
+    '<div class="hero"><div class="hi">Amount to pay</div><div class="amt">' + kes(p.tot / 100) + '</div><div class="sub">' + (t.service > 0 ? 'Includes service charge ' + kes(t.service) : 'Bill total') + '</div></div>' +
+    '<div class="card"><h3>How is it paid?</h3><div class="row"><button class="pay" data-pfull="Cash">All cash</button><button class="pay" data-pfull="M-Pesa">All M-Pesa</button></div>' +
+    '<div class="mu" style="margin-top:6px">Or split between ways below. Each part is counted in your cash, M-Pesa or credit figures.</div>' +
+    payRows.map(function (r, k) {
+      return '<div class="rl"><div class="two"><select data-pr="' + k + '" data-pk="method">' + opts(['Cash', 'M-Pesa', 'Credit'], r.method) + '</select><input data-pr="' + k + '" data-pk="amount" type="number" inputmode="decimal" placeholder="Amount" value="' + esc(r.amount) + '"></div>' +
+        (r.method === 'Credit' ? '<div class="two" style="margin-top:6px"><input data-pr="' + k + '" data-pk="customer" list="pcust" placeholder="Customer name" value="' + esc(r.customer) + '" autocomplete="off"><input data-pr="' + k + '" data-pk="phone" type="tel" placeholder="Phone (optional)" value="' + esc(r.phone) + '"></div>' : '') +
+        (payRows.length > 1 ? '<div class="row"><button class="ghost danger" data-prm="' + k + '">Remove</button><button class="ghost" data-pleft="' + k + '">Put the rest here</button></div>' : '<div class="row"><button class="ghost" data-pleft="' + k + '">Full amount</button></div>') + '</div>';
+    }).join('') + '<datalist id="pcust">' + Object.keys(names).map(function (n) { return '<option value="' + esc(n) + '">'; }).join('') + '</datalist>' +
+    '<div class="row"><button class="ghost" id="addPay" style="flex:1">+ Add another way</button></div><div id="payStat" style="margin-top:10px;font-size:16px">' + payStatusHtml() + '</div>' +
+    '<div class="row"><button class="go" id="confirmPay" style="flex:1">Confirm payment</button></div></div>';
+  $('main').innerHTML = html;
+}
+async function confirmPay() {
+  var p = payTotals(), t = ticketBy(draft.id);
+  if (p.left !== 0) { toast(p.left > 0 ? 'The payments do not cover the bill yet' : 'The payments are more than the bill'); return; }
+  for (var r of payRows) if (c100(r.amount) > 0 && r.method === 'Credit' && !r.customer.trim()) { toast('Type the customer name for credit'); return; }
+  if (tkBusy) return; tkBusy = true;
+  var j = await tkPost({ action: 'payTicket', ticket: t.id, payments: payRows.filter(function (r) { return c100(r.amount) > 0; }).map(function (r) { return { method: r.method, amount: Number(r.amount), customer: r.customer.trim(), phone: r.phone.trim() }; }) });
+  tkBusy = false;
+  if (!j) { render(true); return; }
+  mergeTicket(Object.assign({}, j.ticket, { status: 'Paid' }));
+  paidBill = j.ticket; draft = null; payRows = null; saveTk(); tkSub = 'paid';
+  try { await loadState(); } catch (e) {}
+  render(true);
+}
+function viewPaid() {
+  if (!paidBill) { tkSub = 'tables'; return viewTables(); }
+  $('main').innerHTML = '<div class="ok"><b>Paid ✓</b> Table ' + esc(paidBill.table) + ' · ' + kes(paidBill.total) + '</div>' +
+    '<div class="card">' + billDoc(paidBill, true) + '</div><div class="row"><button class="ghost" id="printPaid">Print receipt</button><button class="go" id="paidDone">Back to tables</button></div>';
+}
+
+/* ---------- kitchen screen ---------- */
+function viewKitchen() {
+  var list = tickets().slice().sort(function (a, b) { return a.t - b.t; });
+  var role = S && S.role, cook = role === 'kitchen' || role === 'owner';
+  var hasBar = list.some(function (t) { return t.lines.some(function (l) { return l.station === 'bar'; }); });
+  var html = '';
+  if (!kitchenOn()) { $('main').innerHTML = lockCard('Live kitchen screen', 'standard'); return; }
+  if (hasBar || kStation !== 'all') html += '<div class="chips">' + [['all', 'All'], ['kitchen', 'Kitchen'], ['bar', 'Bar']].map(function (s) { return '<button class="chip' + (kStation === s[0] ? ' on' : '') + '" data-kst="' + s[0] + '">' + s[1] + '</button>'; }).join('') + '</div>';
+  var cards = '';
+  list.forEach(function (t) {
+    var ls = t.lines.filter(function (l) { return l.status !== 'void' && l.status !== 'served' && (kStation === 'all' || l.station === kStation); });
+    if (!ls.length) return;
+    var oldest = Math.min.apply(null, ls.filter(function (l) { return l.status === 'sent'; }).map(function (l) { return l.sentAt; }).concat([Date.now()]));
+    var age = minsAgo(oldest), pending = ls.filter(function (l) { return l.status === 'sent'; });
+    cards += '<div class="kcard' + (pending.length ? (age >= 15 ? ' late' : '') : ' done') + '"><div class="kh"><b>Table ' + esc(t.table) + '</b><span>' + esc(t.no) + (pending.length ? ' · ' + age + ' min' : '') + (t.waiter ? ' · ' + esc(t.waiter) : '') + '</span></div>' +
+      ls.map(function (l) {
+        var btn = '';
+        if (l.status === 'sent' && cook) btn = '<button class="go" style="flex:none;padding:8px 14px;font-size:14px" data-ks="' + esc(t.id + '|' + l.lid + '|ready') + '">Ready</button>';
+        else if (l.status === 'ready' && role === 'kitchen') btn = '<button class="ghost" data-ks="' + esc(t.id + '|' + l.lid + '|sent') + '">Undo</button>';
+        else if (l.status === 'ready') btn = '<button class="go" style="flex:none;padding:8px 14px;font-size:14px;background:#2563eb" data-ks="' + esc(t.id + '|' + l.lid + '|served') + '">Serve</button>';
+        return '<div class="kl ' + l.status + '"><span><b>' + l.qty + ' ×</b> ' + esc(l.name) + (l.station === 'bar' ? ' <span class="pill">bar</span>' : '') + (l.note ? '<br><span class="knote">' + esc(l.note) + '</span>' : '') + '</span>' + btn + '</div>';
+      }).join('') +
+      (pending.length > 1 && cook ? '<div class="row"><button class="ghost" style="flex:1" data-kall="' + esc(t.id + '|' + pending.map(function (l) { return l.lid; }).join(',')) + '">All ready</button></div>' : '') + '</div>';
+  });
+  $('main').innerHTML = html + (cards || '<div class="card mu" style="text-align:center">Nothing to cook right now. New orders appear here by themselves.</div>') +
+    '<p class="mu" style="text-align:center">' + (navigator.onLine ? 'Updates every few seconds' : 'Offline: reconnect to see new orders') + '</p>';
+}
+
+/* ---------- menu and tables set-up (owner, More) ---------- */
+function plateCost(rec, manual) {
+  if (rec && rec.length) { var c = 0; rec.forEach(function (x) { var it = itemBy(x.code); if (it) c += (Number(x.qty) || 0) * it.cost; }); return c; }
+  return Number(manual) || 0;
+}
+function costHtml() {
+  var cost = plateCost(dishRecipe, F.mdManual), price = Number(F.mdPrice) || 0;
+  return 'Plate cost ' + money2(cost) + (price > 0 ? ' · profit ' + money2(price - cost) + ' (' + pct(price ? (price - cost) / price : 0) + ' margin, food cost ' + pct(price ? cost / price : 0) + ')' : '');
+}
+function openDish(d) {
+  dishEdit = d ? d.code : 'new';
+  F.mdName = d ? d.name : ''; F.mdCat = d ? d.category : ''; F.mdPrice = d ? String(d.price) : ''; F.mdStation = d ? d.station : 'kitchen'; F.mdManual = d && d.manual ? String(d.manual) : ''; F.mdActive = d && !d.active ? 'No' : 'Yes';
+  dishRecipe = d ? (d.recipe || []).map(function (x) { return { code: x.code, qty: String(x.qty) }; }) : [];
+  render(true);
+}
+function viewMenuAdmin(head) {
+  var menu = restS().menu, lim = planLim(), cap = lim.menuMax, active = menu.filter(function (d) { return d.active; }).length;
+  var form = '';
+  if (dishEdit) {
+    var ing = items().slice().sort(function (a, b) { return a.name.localeCompare(b.name); });
+    form = '<div class="card"><h3>' + (dishEdit === 'new' ? 'New dish' : 'Change dish') + '</h3>' +
+      '<label>Dish name</label><input data-f="mdName" value="' + esc(F.mdName) + '" maxlength="60">' +
+      '<div class="two"><div><label>Selling price (KES)</label><input data-f="mdPrice" type="number" inputmode="decimal" value="' + esc(F.mdPrice) + '"></div>' +
+      '<div><label>Group (e.g. Mains, Drinks)</label><input data-f="mdCat" value="' + esc(F.mdCat) + '" placeholder="Mains" maxlength="30"></div></div>' +
+      '<div class="two"><div><label>Made at</label><select data-f="mdStation"><option value="kitchen"' + (F.mdStation === 'kitchen' ? ' selected' : '') + '>Kitchen</option><option value="bar"' + (F.mdStation === 'bar' ? ' selected' : '') + '>Bar / drinks</option></select></div>' +
+      (dishEdit !== 'new' ? '<div><label>On the menu</label><select data-f="mdActive"><option' + (F.mdActive === 'Yes' ? ' selected' : '') + '>Yes</option><option' + (F.mdActive === 'No' ? ' selected' : '') + '>No</option></select></div>' : '<div></div>') + '</div>' +
+      '<label>Recipe: ingredients used for ONE plate</label>' +
+      (lim.recipes ? dishRecipe.map(function (x, k) {
+        return '<div class="two" style="margin-top:6px;grid-template-columns:2fr 1fr auto"><select data-rr="' + k + '" data-rk="code"><option value="">Choose ingredient</option>' + ing.map(function (i) { return '<option value="' + esc(i.code) + '"' + (i.code === x.code ? ' selected' : '') + '>' + esc(i.name) + '</option>'; }).join('') + '</select>' +
+          '<input data-rr="' + k + '" data-rk="qty" type="number" inputmode="decimal" placeholder="Qty" value="' + esc(x.qty) + '"><button class="ghost danger" data-rrm="' + k + '">✕</button></div>';
+      }).join('') + '<div class="row"><button class="ghost" id="addIng" style="flex:1">+ Add ingredient</button></div><div class="mu">Use the same unit as your stock, for example 0.25 for a quarter kg. A drink sold from the fridge is one ingredient, qty 1.</div>'
+        : '<div class="row"><button class="chip" data-goplan="1">🔒 Recipes that take ingredients out of stock (Standard)</button></div>') +
+      (dishRecipe.length ? '' : '<label>Plate cost if you do not use a recipe (KES)</label><input data-f="mdManual" type="number" inputmode="decimal" value="' + esc(F.mdManual) + '">') +
+      '<div id="dishCost" style="margin-top:10px;font-size:14px">' + costHtml() + '</div>' +
+      '<div class="row"><button class="ghost" id="dishCancel">Cancel</button><button class="go" id="dishSave">Save dish</button></div></div>';
+  }
+  var byCat = {}; menu.forEach(function (d) { (byCat[d.category] = byCat[d.category] || []).push(d); });
+  $('main').innerHTML = head + (dishEdit ? form : '<div class="row" style="margin:0 0 8px"><button class="go" id="dishNew" style="flex:1">+ New dish</button></div>' +
+    (cap ? '<div class="mu" style="margin-bottom:8px">' + active + ' of ' + cap + ' dishes used on your plan.</div>' : '') +
+    (menu.length ? Object.keys(byCat).sort().map(function (c) {
+      return '<div class="card"><h3>' + esc(c) + '</h3>' + byCat[c].map(function (d) {
+        var cost = plateCost(d.recipe, d.manual), mg = d.price ? (d.price - cost) / d.price : 0;
+        return '<div class="kv" style="align-items:center;' + (d.active ? '' : 'opacity:.5') + '"><span>' + esc(d.name) + (d.active ? '' : ' <span class="pill">off menu</span>') + '<br><span class="mu">' + kes(d.price) + ' · cost ' + money2(cost) + (cost > 0 ? ' · <span class="' + (mg < 0.55 ? 'amb' : 'grn') + '">' + pct(mg) + ' margin</span>' : ' · no cost set') + (d.recipe && d.recipe.length ? ' · recipe' : '') + '</span></span><button class="ghost" data-dedit="' + esc(d.code) + '">Edit</button></div>';
+      }).join('') + '</div>';
+    }).join('') : '<div class="card mu">No dishes yet. Add your ingredients in Stock first (rice, meat, oil, sodas), then add dishes and say what goes into each.</div>'));
+}
+async function saveDishForm() {
+  var body = { action: 'saveDish', name: F.mdName.trim(), price: Number(F.mdPrice), category: F.mdCat.trim() || 'Food', station: F.mdStation, active: F.mdActive !== 'No',
+    recipe: dishRecipe.filter(function (x) { return x.code && Number(x.qty) > 0; }).map(function (x) { return { code: x.code, qty: Number(x.qty) }; }), manualCost: Number(F.mdManual) || 0 };
+  if (!body.name) { toast('Type the dish name'); return; }
+  if (F.mdPrice === '' || !(body.price >= 0)) { toast('Type the selling price'); return; }
+  if (dishEdit !== 'new') body.code = dishEdit;
+  var j = await onlineAction(body, 'Dish saved');
+  if (j) { dishEdit = null; render(true); }
+}
+function viewTablesAdmin(head) {
+  if (F.tbNames === '' && !F._tbInit) { F.tbNames = restS().tables.join(', '); F.tbSvc = String(restS().service || 0); F._tbInit = 1; }
+  $('main').innerHTML = head + '<div class="card"><h3>Tables</h3><div class="mu">Type your table names, separated by commas. For example: T1, T2, T3, Patio 1, Bar 1</div>' +
+    '<label>Table names</label><input data-f="tbNames" value="' + esc(F.tbNames) + '">' +
+    '<label>Service charge on bills (%)</label><input data-f="tbSvc" type="number" inputmode="decimal" min="0" max="25" value="' + esc(F.tbSvc) + '"><div class="mu">0 means no service charge. It is added to the bill and counted as income. Record what you pay your staff from it as a Wages expense.</div>' +
+    '<div class="row"><button class="go" id="saveTables" style="flex:1">Save</button></div></div>';
+}
+async function saveTablesForm() {
+  var j = await onlineAction({ action: 'saveRestaurant', tables: F.tbNames.split(',').map(function (x) { return x.trim(); }).filter(Boolean), service: Number(F.tbSvc) || 0 }, 'Saved');
+  if (j) { O = null; F._tbInit = 0; F.tbNames = ''; render(true); }
+}
+
+/* ---------- today card ---------- */
+function restTodayCard() {
+  var r = restS().today || {}, open = tickets().length, rd = 0;
+  tickets().forEach(function (t) { t.lines.forEach(function (l) { if (l.status === 'ready') rd++; }); });
+  return '<div class="kpis">' + kpi('Bills paid today', String(r.bills || 0), (r.covers || 0) + ' guests') + kpi('Open bills now', String(open), rd ? '<span class="up">' + rd + ' ready to serve</span>' : '') + '</div>' +
+    (r.voids ? '<div class="warn">' + r.voids + ' dish' + (r.voids > 1 ? 'es' : '') + ' cancelled today (' + kes(r.voidValue) + ').</div>' : '');
+}
+
+/* ---------- menu report ---------- */
+var CLS_TXT = { Star: 'Popular and profitable. Keep it, protect quality, put it first.', Plowhorse: 'Popular but thin profit. Nudge the price up or trim the cost.', Puzzle: 'Profitable but few order it. Promote it, rename it, or move it up the menu.', Dog: 'Few orders and low profit. Consider dropping it.' };
+function menuReportBody(r) {
+  var m = r.menu, h = '';
+  var tiles = '<div class="kpis">' + kpi('Food cost', pct(m.foodCostPct), 'of dish sales. Most restaurants aim for 28–35%.', m.foodCostPct > 0.4 ? 'neg' : 'pos') + kpi('Average bill', money2(m.avgBill), m.bills + ' bills') + kpi('Spend per guest', money2(m.avgCover), m.covers + ' guests') + kpi('Cancelled dishes', String(m.voidCount), money2(m.voidValue), m.voidCount ? 'neg' : '') + '</div>';
+  var colors = ['#0f766e', '#2563eb', '#d97706', '#7c3aed', '#dc2626', '#64748b'];
+  h += '<div class="sec">Sales by group</div>' + segBar(m.byCat.map(function (c, i) { return { label: c.name + ' ' + money2(c.revenue), value: c.revenue, color: colors[i % colors.length] }; }));
+  h += '<div class="sec">Your dishes, best profit first</div>' + (m.dishes.length ? '<table class="lines"><thead><tr><th>Dish</th><th class="r">Sold</th><th class="r">Profit each</th><th class="r">Profit</th><th>Class</th></tr></thead><tbody>' + m.dishes.map(function (d) {
+    return '<tr><td>' + esc(d.name) + '</td><td class="r">' + d.qty + '</td><td class="r">' + money2(d.cm) + '</td><td class="r">' + money2(d.profit) + '</td><td><span class="pill cls' + d.cls + '">' + d.cls + '</span></td></tr>'; }).join('') + '</tbody></table>' : '<p>No dishes sold in this period.</p>');
+  h += '<p class="note">' + Object.keys(CLS_TXT).map(function (k) { return '<b>' + k + ':</b> ' + CLS_TXT[k]; }).join('<br>') + '<br>Based on how often each dish sold and the profit each plate earns (average ' + money2(m.avgCm) + ').</p>';
+  if (m.byHour.length) h += '<div class="sec">Busiest hours</div>' + hBars(m.byHour.map(function (x) { return { name: pad2(x.h) + ':00', value: x.v, label: money2(x.v) }; }), '#2563eb');
+  if (m.byWaiter.length > 1) h += '<div class="sec">Sales by waiter</div>' + hBars(m.byWaiter.map(function (x) { return { name: x.name, value: x.v, label: money2(x.v) }; }), '#7c3aed');
+  if (m.service > 0) h += '<table class="tot">' + trow('Service charge collected (included in income)', money2(m.service)) + '</table>';
+  if (m.vatIncluded > 0) h += '<table class="tot">' + trow('VAT included in sales (' + m.vatRate + '%, estimate)', money2(m.vatIncluded)) + '</table>';
+  if (m.voids.length) h += '<div class="sec">Cancelled dishes</div><table class="lines"><thead><tr><th>Bill</th><th>Dish</th><th>Why / who</th><th class="r">Value</th></tr></thead><tbody>' + m.voids.map(function (v) {
+    return '<tr><td>' + esc(v.no) + '</td><td>' + v.qty + ' × ' + esc(v.dish) + '</td><td>' + esc(v.reason) + (v.by ? '<br><span class="mu">' + esc(v.by) + '</span>' : '') + '</td><td class="r">' + money2(v.value) + '</td></tr>'; }).join('') + '</tbody></table>';
+  return { tiles: tiles, body: h };
+}
+
+/* ---------- events for the restaurant screens ---------- */
+document.addEventListener('click', function (e) {
+  var b = e.target.closest('button'); if (!b || !isRest()) return;
+  var d = b.dataset, id = b.id;
+  if (d.tb !== undefined) newDraft(d.tb);
+  else if (d.tbill) openBill(d.tbill);
+  else if (id === 'tkNew') newDraft('Takeaway');
+  else if (id === 'tkBack') closeBill();
+  else if (d.tcat !== undefined) { tkCat = d.tcat; render(true); }
+  else if (d.dish) { var l = draft.lines.find(function (x) { return x.code === d.dish && !x.note; }); if (l) l.qty++; else draft.lines.push({ lid: uid(), code: d.dish, qty: 1, note: '' }); saveTk(); render(true); }
+  else if (d.dq) { var p = d.dq.split('|'), ln = draft.lines[Number(p[0])]; if (ln) { ln.qty += Number(p[1]); if (ln.qty <= 0) draft.lines.splice(Number(p[0]), 1); } saveTk(); render(true); }
+  else if (id === 'tkSend') sendDraft();
+  else if (id === 'tkPrintK') { var t0 = ticketBy(draft.id) || { table: draft.table, no: '', waiter: (S && S.who) || '' }; printHtml(kitchenDoc(t0, draftLines().map(function (x) { var dd = dishBy(x.code) || {}; return Object.assign({}, x, { station: dd.station }); }))); }
+  else if (id === 'tkPrintB') { var t1 = ticketBy(draft.id); if (t1) printHtml(billDoc(t1, false)); }
+  else if (id === 'tkPay') { if (draft.lines.length) toast('Send the new dishes first'); else openPay(); }
+  else if (d.ks) { var q = d.ks.split('|'); lineAction(q[0], q[1], q[2]); }
+  else if (d.kall) { var z = d.kall.split('|'); tkPost({ action: 'lineStatus', ticket: z[0], lids: z[1].split(','), status: 'ready' }).then(function (j) { if (j) { mergeTicket(j.ticket); render(true); } }); }
+  else if (d.kst) { kStation = d.kst; render(true); }
+  else if (d.vl) { var v = d.vl.split('|'); voidLineAsk(v[0], v[1]); }
+  else if (id === 'payBack') { tkSub = 'bill'; render(true); }
+  else if (d.pfull) { payRows = [{ method: d.pfull, amount: String(payTotals().tot / 100), customer: '', phone: '' }]; render(true); }
+  else if (d.pleft !== undefined) { var k = Number(d.pleft), other = 0; payRows.forEach(function (r, i) { if (i !== k) other += c100(r.amount); }); payRows[k].amount = String(Math.max(0, payTotals().tot - other) / 100); render(true); }
+  else if (d.prm !== undefined) { payRows.splice(Number(d.prm), 1); render(true); }
+  else if (id === 'addPay') { payRows.push({ method: 'M-Pesa', amount: '', customer: '', phone: '' }); render(true); }
+  else if (id === 'confirmPay') confirmPay();
+  else if (id === 'printPaid') { if (paidBill) printHtml(billDoc(paidBill, true)); }
+  else if (id === 'paidDone') { paidBill = null; tkSub = 'tables'; render(true); }
+  else if (id === 'dishNew') openDish(null);
+  else if (d.dedit) openDish(dishBy(d.dedit));
+  else if (id === 'dishCancel') { dishEdit = null; render(true); }
+  else if (id === 'addIng') { dishRecipe.push({ code: '', qty: '' }); render(true); }
+  else if (d.rrm !== undefined) { dishRecipe.splice(Number(d.rrm), 1); render(true); }
+  else if (id === 'dishSave') saveDishForm();
+  else if (id === 'saveTables') saveTablesForm();
+});
+document.addEventListener('input', function (e) {
+  var t = e.target, d = t.dataset;
+  if (!isRest()) return;
+  if (t.id === 'tkq') { F.tkQ = t.value; render(true); var el = $('tkq'); if (el) { el.focus(); try { el.setSelectionRange(el.value.length, el.value.length); } catch (x) {} } }
+  else if (t.id === 'tkCovers') { draft.covers = t.value; saveTk(); }
+  else if (t.id === 'tkNote') { draft.note = t.value; saveTk(); }
+  else if (d.dn !== undefined) { draft.lines[Number(d.dn)].note = t.value; saveTk(); }
+  else if (d.pr !== undefined) { payRows[Number(d.pr)][d.pk] = t.value; var ps = $('payStat'); if (ps) ps.innerHTML = payStatusHtml(); }
+  else if (d.rr !== undefined) { dishRecipe[Number(d.rr)][d.rk] = t.value; var dc = $('dishCost'); if (dc) dc.innerHTML = costHtml(); }
+  else if (d.f === 'mdPrice' || d.f === 'mdManual') { F[d.f] = t.value; var dc2 = $('dishCost'); if (dc2) dc2.innerHTML = costHtml(); }
+});
+document.addEventListener('change', function (e) {
+  var t = e.target, d = t.dataset;
+  if (!isRest()) return;
+  if (t.id === 'tkMove' && t.value) moveBill(t.value);
+  else if (d.pr !== undefined && d.pk === 'method') { payRows[Number(d.pr)].method = t.value; render(true); }
+  else if (d.rr !== undefined && d.rk === 'code') { dishRecipe[Number(d.rr)].code = t.value; var dc = $('dishCost'); if (dc) dc.innerHTML = costHtml(); }
+  else if (d.f === 'mdStation' || d.f === 'mdActive') F[d.f] = t.value;
+  else if (d.f === 'sRole') { F.sRole = t.value; }
+});
+setInterval(pollOrders, 6000);
+
 /* ---------- events ---------- */
 document.addEventListener('click', function (e) {
   var b = e.target.closest('button, .kv[data-edit]'); if (!b) return;
@@ -1494,7 +1928,7 @@ document.addEventListener('click', function (e) {
   else if (b.id === 'saveRec') saveDelivery();
   else if (b.id === 'savePay') savePayment();
   else if (b.id === 'addStaff') addStaff();
-  else if (b.id === 'newItemBtn') { newItemOpen = true; editCode = null; F.iName = F.iCat = F.iPrice = F.iCost = F.iOpen = F.iBar = ''; F.iReorder = '5'; render(true); }
+  else if (b.id === 'newItemBtn') { newItemOpen = true; editCode = null; F.iName = F.iCat = F.iPrice = F.iCost = F.iOpen = F.iBar = ''; F.iReorder = '5'; if (isRest()) F.iPrice = '0'; render(true); }
   else if (b.id === 'cancelItem') { newItemOpen = false; editCode = null; render(true); }
   else if (b.id === 'saveItemBtn') saveItemForm();
   else if (b.id === 'saveCounts') saveCounts();
@@ -1547,7 +1981,7 @@ document.addEventListener('visibilitychange', function () { if (!document.hidden
 setInterval(sync, 30000);
 
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
-refreshLocal(true).then(sync);
+refreshLocal(true).then(sync).then(function () { try { pollOrders(); } catch (e) {} });
 </script>
 </body>
 </html>

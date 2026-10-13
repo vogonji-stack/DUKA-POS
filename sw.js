@@ -1,6 +1,6 @@
 // Caches the app shell so the POS opens with no internet.
 // Bump VERSION whenever index.html changes so phones pick up the update.
-var VERSION = 'duka-v5';
+var VERSION = 'duka-v6';
 var SHELL = ['./', 'index.html', 'manifest.webmanifest', 'icon.svg'];
 
 self.addEventListener('install', function (e) {
