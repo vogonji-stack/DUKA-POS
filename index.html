@@ -126,6 +126,8 @@
   .doc .kpis{margin:8px 0}.doc .kpi{break-inside:avoid}
   .doc .seg i,.doc .hb .b i,.doc .legend b{-webkit-print-color-adjust:exact;print-color-adjust:exact}
   .scan{position:fixed;inset:0;background:#000;z-index:30;display:flex;flex-direction:column}.scan video{flex:1;width:100%;object-fit:cover}.scanbar{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:12px;background:#111;color:#fff}
+  .terms{max-height:260px;overflow:auto;border:1px solid var(--line);border-radius:12px;padding:10px 12px;font-size:13px;line-height:1.45;background:var(--soft)}.terms p{margin:0 0 8px}
+  .bktbl{font-size:13px;width:100%;border-collapse:collapse}.bktbl td,.bktbl th{padding:5px 6px;border-bottom:1px solid var(--line)}.bktbl th{color:var(--mu);font-weight:600}
   .tbls{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}@media(min-width:520px){.tbls{grid-template-columns:repeat(3,1fr)}}
   .tbl{border:2px solid var(--line);border-radius:16px;padding:12px;text-align:left;background:var(--card);min-height:92px;color:var(--tx);display:flex;flex-direction:column;gap:3px;font-size:15px}.tbl b{font-size:17px}
   .tbl.free{border-style:dashed;color:var(--mu)}.tbl.busy{border-color:#f1d58a;background:var(--card)af0}.tbl.rdy{border-color:var(--g);background:var(--gl)}
@@ -257,7 +259,11 @@ var m=document.querySelector('meta[name=theme-color]');if(m)m.setAttribute('cont
 <script>
 /* ---------- shop link: index.html?api=...&k=... (remembered on this phone) ---------- */
 var P = new URLSearchParams(location.search);
-if (P.get('api')) {
+var INV = P.get('inv') || '';          // a supplier opening an invitation link: show the terms page, never touch this phone's own key
+if (P.get('api') && INV) {
+  try { if (!localStorage.getItem('api')) localStorage.setItem('api', P.get('api')); } catch (e) {}
+  window.INV_API = P.get('api'); history.replaceState({}, '', location.pathname);
+} else if (P.get('api')) {
   try { localStorage.setItem('api', P.get('api')); localStorage.setItem('k', P.get('k') || ''); if (P.get('adm')) localStorage.setItem('adm', P.get('adm')); } catch (e) {}
   history.replaceState({}, '', location.pathname);
 }
@@ -304,6 +310,33 @@ var F = { recSupplier: '', recSupPhone: '', recQ: '', iq: '', cq: '', oq: '', or
 var recLines = [], recRef = '', counts = {}, editCode = null, newItemOpen = false;
 var gate = null, DEVS = null, devAt = 0, devBusy = false;
 var ordCart = {}, usePts = 0, orderDone = null, ordCat = 'All';
+/* v8: many suppliers (vendors). ordVendor is the supplier being ordered from; VC holds each vendor's items, fetched when opened. */
+var ordVendor = 1, VC = {}, vcBusy = false;
+try { VC = JSON.parse(localStorage.getItem('vc_' + KEY) || '{}') || {}; } catch (e) { VC = {}; }
+var vendorsList = function () { return (S && S.vendors && S.vendors.length) ? S.vendors : [{ id: 1, name: (S && S.vendor) || 'Duka Supply', phone: '', area: '', items: 0 }]; };
+var vendorOf = function (id) { var l = vendorsList(); for (var i = 0; i < l.length; i++) if (l[i].id === Number(id)) return l[i]; return null; };
+var curCat = function () { var c = VC[ordVendor]; if (c) return c; return ordVendor === 1 ? ((S && S.catalogue) || []) : []; };
+async function loadVendorCat(id, force) {
+  if (!navigator.onLine || !API || vcBusy) return;
+  if (VC[id] && !force) return;
+  vcBusy = true;
+  try {
+    var j = await post({ token: KEY, action: 'catalogue', vendor: id });
+    if (j && j.ok) { VC[id] = j.items || []; try { localStorage.setItem('vc_' + KEY, JSON.stringify(VC)); } catch (e) {} }
+    else if (j && j.error) toast(j.error);
+  } catch (e) { /* offline: show what we have */ }
+  vcBusy = false;
+  if (tab === 'order' && !gate) render(true);
+}
+function pickVendor(id) {
+  id = Number(id);
+  if (id === ordVendor) return;
+  if (ordCodes().length && !confirm('Your order list is for ' + ((vendorOf(ordVendor) || {}).name || 'another supplier') + '. Clear it and switch?')) return;
+  ordCart = {}; usePts = 0; ordCat = 'All'; F.oq = ''; orderDone = null; ordVendor = id;
+  try { localStorage.setItem('ordv_' + KEY, String(id)); } catch (e) {}
+  render(true); loadVendorCat(id, true);
+}
+try { ordVendor = Number(localStorage.getItem('ordv_' + KEY)) || 1; } catch (e) { ordVendor = 1; }
 var cartOpen = false, cartOrder = [], lastAdded = null, ordOpen = false, cartTop = false, softT = null;
 var wideMQ = window.matchMedia('(min-width:900px)');
 var wide = function () { return wideMQ.matches; };
@@ -406,6 +439,7 @@ function renderStatus() {
   else if (syncErr && errMsg === 'paused') el.textContent = 'Account paused';
   else if (syncErr && errMsg === 'inactive') el.textContent = 'Access removed';
   else if (syncErr && errMsg === 'bad key') el.textContent = 'Wrong link';
+  else if (syncErr && errMsg === 'pending') el.textContent = 'Waiting for approval';
   else if (syncErr && errMsg === 'gate') el.textContent = 'Confirm this phone';
   else if (!navigator.onLine) el.textContent = 'Offline' + (n ? ' · ' + n + ' waiting' : '');
   else if (syncErr) el.textContent = 'Sync problem' + (n ? ' · ' + n + ' waiting' : '');
@@ -558,7 +592,7 @@ function recFromOrder(id) {
              isNew: !it, price: it ? '' : String(Math.ceil(cost * 1.25 / 5) * 5),
              category: l.category || 'General' };
   });
-  F.recSupplier = (S && S.vendor) || 'Duka Supply'; recRef = id; saveDraft();
+  F.recSupplier = o.vname || (S && S.vendor) || 'Duka Supply'; recRef = id; saveDraft();
   tab = 'stock'; stockSub = 'receive'; render(true);
   toast('Check the quantities, then Save delivery');
 }
@@ -585,7 +619,7 @@ async function saveDelivery() {
 }
 function knownSupplier(name) {
   var n = name.trim().toLowerCase();
-  return ((S && S.suppliers) || []).concat([(S && S.vendor) || '']).some(function (x) { return String(x).toLowerCase() === n; });
+  return ((S && S.suppliers) || []).concat(vendorsList().map(function (v) { return v.name; })).some(function (x) { return String(x).toLowerCase() === n; });
 }
 
 /* ---------- stock: items, counts, adjustments ---------- */
@@ -670,18 +704,18 @@ function linkFor(key) { return location.origin + location.pathname + '?api=' + A
 
 /* ---------- ordering from the supplier ---------- */
 function ordTotal() {
-  var t = 0; Object.keys(ordCart).forEach(function (c) { var x = ((S && S.catalogue) || []).find(function (i) { return i.code === c; }); if (x) t += x.price * ordCart[c]; }); return t;
+  var t = 0; Object.keys(ordCart).forEach(function (c) { var x = curCat().find(function (i) { return i.code === c; }); if (x) t += x.price * ordCart[c]; }); return t;
 }
-function maxPts() { var p = (S && S.points) || { available: 0, value: 1 }; return Math.max(0, Math.min(p.available, Math.floor(ordTotal() / (p.value || 1)))); }
+function maxPts() { if (ordVendor !== 1) return 0; var p = (S && S.points) || { available: 0, value: 1 }; return Math.max(0, Math.min(p.available, Math.floor(ordTotal() / (p.value || 1)))); }
 async function placeOrder() {
   var lines = Object.keys(ordCart).map(function (c) { return { code: c, qty: ordCart[c] }; });
   if (!lines.length) return;
   if (!navigator.onLine) { toast('You need internet to place an order'); return; }
   var btn = $('placeOrder'); if (btn) btn.disabled = true;
   try {
-    var j = await post({ token: KEY, action: 'placeOrder', id: uid(), lines: lines, usePoints: Math.min(Number(usePts) || 0, maxPts()), note: F.ordNote.trim() });
+    var j = await post({ token: KEY, action: 'placeOrder', id: uid(), vendor: ordVendor, lines: lines, usePoints: Math.min(Number(usePts) || 0, maxPts()), note: F.ordNote.trim() });
     if (!j.ok) { toast(j.error || 'Order failed'); if (btn) btn.disabled = false; return; }
-    ordCart = {}; usePts = 0; F.ordNote = ''; orderDone = j;
+    ordCart = {}; usePts = 0; F.ordNote = ''; orderDone = Object.assign({ vendor: ordVendor }, j);
     await loadState(); render(true);
   } catch (e) { toast('Could not reach the server'); if (btn) btn.disabled = false; }
 }
@@ -741,6 +775,7 @@ function todayNums() {
 
 /* ---------- screens ---------- */
 function tabs() {
+  if (S && S.mode === 'vendor') return vTabs();
   if (isRest()) {
     var kt = kitchenOn() ? [['kitchen', 'Kitchen']] : [];
     if (S.role === 'kitchen') return [['kitchen', 'Kitchen']];
@@ -823,12 +858,18 @@ async function gateMove() {
 async function gateRetry() { gate = null; render(true); await sync(); }
 
 function render(force) {
+  if (INV) { if (!force && userIsTyping()) return; viewInvite(); return; }
   renderStatus();
   if (!force && userIsTyping()) return;     // never wipe what someone is typing
   if (gate) {
     $('nav').innerHTML = ''; $('banner').innerHTML = ''; $('main').className = 't-gate'; $('cart').style.display = 'none'; document.body.classList.remove('cartp');
     viewGate(); return;
   }
+  if (syncErr && errMsg === 'pending') {
+    $('nav').innerHTML = ''; $('banner').innerHTML = ''; $('cart').style.display = 'none'; document.body.classList.remove('cartp'); $('main').className = 't-gate';
+    $('main').innerHTML = '<div class="card lock"><div class="lk">⏳</div><h3>Your vendor application is waiting for approval</h3><div class="mu">We are checking your details. You will get an email as soon as you are approved. Open this link again after that.</div></div>'; return;
+  }
+  if (isVendor()) { renderStatus(); if (!API) { $('main').innerHTML = '<div class="setup"><h2>Link needed</h2><p class="mu">Open the vendor link you were sent (it ends with &k=…) once, then add the app to your home screen.</p></div>'; return; } renderVendor(); return; }
   var ts = tabs();
   if (!ts.some(function (t) { return t[0] === tab; })) tab = ts[0][0];
   $('main').className = 't-' + tab;
@@ -864,6 +905,7 @@ function viewSell() {
   var list = list0.filter(function (i) {
     return (cat === 'All' || (cat === '__low' ? low.indexOf(i) > -1 : i.category === cat)) && (!q || (i.name + ' ' + i.code + ' ' + (i.barcode || '')).toLowerCase().indexOf(q.toLowerCase()) > -1);
   });
+  if (cat === 'All' && !q) list = list.map(function (i, n) { return [i, n]; }).sort(function (a, b) { return ((b[0].sold7 || 0) - (a[0].sold7 || 0)) || (a[1] - b[1]); }).map(function (x) { return x[0]; });   // what sells most comes first
   var chipH = cats.map(function (c) { return '<button class="chip' + (c === cat ? ' on' : '') + '" data-cat="' + esc(c) + '">' + esc(c) + '</button>'; });
   if (low.length) chipH.splice(1, 0, '<button class="chip' + (cat === '__low' ? ' on' : '') + '" data-cat="__low">⚠ Running low ' + low.length + '</button>');
   var html = lastSaleBar() + '<div style="display:flex;gap:8px"><input id="q" type="search" placeholder="Search item or code" value="' + esc(q) + '"><button class="ghost" id="scanSell" style="white-space:nowrap">▦ Scan</button></div>' +
@@ -945,12 +987,13 @@ function renderCart() {
 /* ----- stock ----- */
 function viewStock() {
   if (!v2()) { viewReceive(''); return; }
-  var subs = [['receive', 'Receive']].concat(v4() ? [['import', 'Import']] : [], [['items', 'Items'], ['count', 'Count'], ['aging', 'Aging'], ['expiry', 'Expiry']]);
+  var subs = [['receive', 'Receive']].concat(v4() ? [['import', 'Import']] : [], [['bulk', 'Upload'], ['items', 'Items'], ['count', 'Count'], ['aging', 'Aging'], ['expiry', 'Expiry']]);
   var head = '<div class="chips">' + subs.map(function (s) {
     return '<button class="chip' + (stockSub === s[0] ? ' on' : '') + '" data-sub="' + s[0] + '">' + s[1] + '</button>';
   }).join('') + '</div>';
   if (v4() && !planLim().stockTools && (stockSub === 'aging' || stockSub === 'expiry')) { $('main').innerHTML = head + lockCard('Stock ageing and expiry alerts', 'standard'); return; }
   if (stockSub === 'import' && v4()) { viewImport(head); return; }
+  if (stockSub === 'bulk') { viewBulk(head); return; }
   if (stockSub === 'aging') viewAging(head); else if (stockSub === 'expiry') viewExpiry(head);
   else if (stockSub === 'items') viewItems(head); else if (stockSub === 'count') viewCount(head); else viewReceive(head);
 }
@@ -967,11 +1010,11 @@ function viewReceive(head) {
   var recd = (S && S.receivedRefs) || [];
   var ords = ((S && S.orders) || []).filter(function (o) { return o.status === 'Delivered' && recd.indexOf(o.id) < 0 && !L.receipts.some(function (r) { return r.ref === o.id; }); });
   var ordBox = ords.length ? '<div class="ok"><b>Delivered orders waiting</b>' + ords.map(function (o) {
-    return '<div class="row"><span style="flex:1">Order ' + esc(o.id.slice(0, 5).toUpperCase()) + ' · ' + kes(o.pay) + '</span><button class="ghost" data-recorder="' + esc(o.id) + '">Receive</button></div>'; }).join('') + '</div>' : '';
+    return '<div class="row"><span style="flex:1">Order ' + esc(o.id.slice(0, 5).toUpperCase()) + (o.vname ? ' · ' + esc(o.vname) : '') + ' · ' + kes(o.pay) + '</span><button class="ghost" data-recorder="' + esc(o.id) + '">Receive</button></div>'; }).join('') + '</div>' : '';
   var supBox = '';
   if (v2()) {
     var isNew = F.recSupplier.trim() && !knownSupplier(F.recSupplier);
-    var names = ((S && S.suppliers) || []).concat([(S && S.vendor) || '']).filter(function (n, i, a) { return n && a.indexOf(n) === i; });
+    var names = ((S && S.suppliers) || []).concat(vendorsList().map(function (v) { return v.name; })).filter(function (n, i, a) { return n && a.indexOf(n) === i; });
     supBox = '<label>Supplier (who delivered this?)</label><input data-f="recSupplier" list="suplist" placeholder="e.g. Mama Njeri Wholesalers" value="' + esc(F.recSupplier) + '" autocomplete="off">' +
       '<datalist id="suplist">' + names.map(function (n) { return '<option value="' + esc(n) + '">'; }).join('') + '</datalist>' +
       (isNew ? '<label>Supplier phone (optional, saved for next time)</label><input data-f="recSupPhone" type="tel" value="' + esc(F.recSupPhone) + '">' : '');
@@ -1094,7 +1137,7 @@ function renderOrderBar(el) {
   if (!codes.length && !w) { el.style.display = 'none'; ordOpen = false; return; }
   if (!codes.length) ordOpen = false;
   var oldL = $('ordL'), oldB = $('shb'), stL = oldL ? oldL.scrollTop : 0, stB = oldB ? oldB.scrollTop : 0;
-  var open = ordOpen || w, cata = (S && S.catalogue) || [];
+  var open = ordOpen || w, cata = curCat();
   var total = ordTotal(), mp = maxPts(), use = Math.min(Number(usePts) || 0, mp), p = (S && S.points) || { value: 1 };
   var lines = codes.map(function (code) { return cata.find(function (c) { return c.code === code; }); }).filter(Boolean)
     .sort(function (a, b) { return a.name.localeCompare(b.name); }).map(function (c) {
@@ -1118,29 +1161,52 @@ function renderOrderBar(el) {
 }
 
 function viewOrder() {
-  var cata = (S && S.catalogue) || [], p = (S && S.points) || { available: 0, value: 1, per100: 1 };
-  var vend = (S && S.vendor) || 'Duka Supply';
+  var vlist = vendorsList();
+  if (!vendorOf(ordVendor)) ordVendor = 1;
+  if (ordVendor !== 1 && !VC[ordVendor]) loadVendorCat(ordVendor, true);
+  var cata = curCat(), p = (S && S.points) || { available: 0, value: 1, per100: 1 };
+  var vo = vendorOf(ordVendor) || vlist[0], vend = vo.name, loading = ordVendor !== 1 && !VC[ordVendor];
   var cats = ['All'].concat(cata.map(function (c) { return c.category; }).filter(function (v, i, a) { return a.indexOf(v) === i; }));
   var term = F.oq.trim().toLowerCase();
   var list = cata.filter(function (c) { return (ordCat === 'All' || c.category === ordCat) && (!term || c.name.toLowerCase().indexOf(term) > -1); });
-  var done = orderDone ? '<div class="ok"><b>Order sent.</b> ' + kes(orderDone.pay) + ' to pay' + (orderDone.used ? ' (after ' + orderDone.used + ' points)' : '') + '. We will confirm it with you.</div>' : '';
+  var dv = orderDone ? (vendorOf(orderDone.vendor) || vo) : null, dph = dv && dv.phone ? waNumber(dv.phone) : '';
+  var done = orderDone ? '<div class="ok"><b>Order sent to ' + esc(dv.name) + '.</b> ' + kes(orderDone.pay) + ' to pay' + (orderDone.used ? ' (after ' + orderDone.used + ' points)' : '') + '. ' +
+    (dph ? '<a href="https://wa.me/' + dph + '" target="_blank" rel="noopener">Message ' + esc(dv.name) + ' on WhatsApp</a> to arrange delivery and payment.' : 'They will confirm it with you.') + '</div>' : '';
+  var vpick = vlist.length > 1 ? '<div class="card"><h3>Who do you want to order from?</h3><div class="chips">' + vlist.map(function (v) {
+    return '<button class="chip' + (v.id === ordVendor ? ' on' : '') + '" data-vend="' + v.id + '">' + esc(v.name) + (v.link === 'Requested' ? ' ⏳' : v.link === 'none' ? '' : '') + '</button>'; }).join('') + '</div>' +
+    '<div class="mu">' + esc(vo.area || '') + (vo.area && vo.phone ? ' · ' : '') + esc(vo.phone || '') + (vo.verified && vo.id !== 1 ? ' · <b class="grn">Verified ✓</b>' : (vo.id !== 1 ? ' · New on Duka POS' : '')) + '</div>' +
+    (vo.cover && vo.id !== 1 ? '<div class="mu">Delivers to: ' + esc(vo.cover) + '</div>' : '') + '</div>' : '';
+  var orderable = !vo.link || vo.link === 'open' || vo.link === 'Accepted';
+  var linkBanner = orderable ? '' : '<div class="card"><h3>' + (vo.link === 'Requested' ? 'Waiting for ' + esc(vo.name) + ' to accept' : vo.link === 'Declined' ? esc(vo.name) + ' is not serving your shop' : 'Ask ' + esc(vo.name) + ' to serve your shop') + '</h3><div class="mu">' +
+    (vo.link === 'Requested' ? 'We told them. You can order as soon as they accept. You can already see their products below.' : vo.link === 'Declined' ? 'You can call them on ' + esc(vo.phone || 'their phone') + ' to ask why.' : 'A supplier chooses which shops it serves. Send your request, then order here once they accept. Their products are below.') + '</div>' +
+    (vo.link === 'none' ? '<div class="row"><button class="go" data-reqv="' + vo.id + '" style="flex:1">Ask to buy from ' + esc(vo.name) + '</button></div>' : '') + '</div>';
+  var cntyCard = (S && !S.county && S.counties) ? '<div class="card"><h3>Where is your shop?</h3><div class="mu">Choose your county. We show you suppliers who deliver to you, so a shop in Mombasa is not shown a supplier who only delivers in Nairobi.</div>' +
+    '<select data-f="cnty"><option value="">Choose county</option>' + S.counties.map(function (c) { return '<option' + (F.cnty === c ? ' selected' : '') + '>' + esc(c) + '</option>'; }).join('') + '</select>' +
+    '<div class="row"><button class="go" id="cntySave" style="flex:1">Save my county</button></div></div>' : '';
+  var vOrders = ((S && S.orders) || []).filter(function (o) { return (o.vendor || 1) === ordVendor && o.status !== 'Cancelled' && (o.lines || []).length; });
+  var freq = {}; vOrders.forEach(function (o) { o.lines.forEach(function (l) { freq[l.code] = (freq[l.code] || 0) + 1; }); });
+  var often = cata.filter(function (c) { return freq[c.code] > 1; }).sort(function (a, b) { return freq[b.code] - freq[a.code]; }).slice(0, 5);
+  var again = (orderable && vOrders.length && !ordCodes().length && cata.length) ? '<div class="card"><h3>Order again</h3><div class="mu">Your last order from ' + esc(vend) + ': ' + vOrders[0].lines.map(function (l) { return esc(l.name) + ' ×' + l.qty; }).join(', ') + '</div>' +
+    '<div class="row"><button class="go" data-again="' + esc(vOrders[0].id) + '" style="flex:1">Put it in my order</button></div>' +
+    (often.length ? '<div class="mu" style="margin-top:8px">You often order:</div><div class="chips">' + often.map(function (c) { return '<button class="chip" data-oc="' + esc(c.code) + '" data-od="1">+ ' + esc(c.name) + '</button>'; }).join('') + '</div>' : '') + '</div>' : '';
   var recd = (S && S.receivedRefs) || [];
   var mine = ((S && S.orders) || []).map(function (o) {
     var got = recd.indexOf(o.id) > -1 || L.receipts.some(function (r) { return r.ref === o.id; });
-    return '<div class="kv" style="align-items:flex-start"><span>Order ' + esc(o.id.slice(0, 5).toUpperCase()) + ' <span class="pill ' + o.status + '">' + o.status + '</span><br><span class="mu">' + new Date(o.t).toLocaleDateString('en-KE') + ' · ' + (o.lines || []).map(function (l) { return esc(l.name) + ' ×' + l.qty; }).join(', ') + '</span></span>' +
+    return '<div class="kv" style="align-items:flex-start"><span>Order ' + esc(o.id.slice(0, 5).toUpperCase()) + (vlist.length > 1 && o.vname ? ' · ' + esc(o.vname) : '') + ' <span class="pill ' + o.status + '">' + o.status + '</span><br><span class="mu">' + new Date(o.t).toLocaleDateString('en-KE') + ' · ' + (o.lines || []).map(function (l) { return esc(l.name) + ' ×' + l.qty; }).join(', ') + '</span></span>' +
       '<span style="text-align:right"><b>' + kes(o.pay) + '</b>' + (o.status === 'Delivered' ? '<br>' + (got ? '<span class="grn">✓ Received</span>' : '<button class="ghost" data-recorder="' + esc(o.id) + '">Receive</button>') : '') + '</span></div>';
   }).join('');
-  $('main').innerHTML = done +
-    '<div class="card pts"><div style="font-size:13px">Your points</div><div style="font-size:30px;font-weight:800">' + p.available + '</div>' +
-    '<div style="font-size:13px">Worth ' + kes(p.available * (p.value || 1)) + '. You earn ' + (p.per100 || 1) + ' point per KES 100 you pay on delivered orders. Use points as a discount below.</div></div>' +
+  $('main').innerHTML = done + cntyCard + vpick + linkBanner + again +
+    (ordVendor === 1 ? '<div class="card pts"><div style="font-size:13px">Your points</div><div style="font-size:30px;font-weight:800">' + p.available + '</div>' +
+    '<div style="font-size:13px">Worth ' + kes(p.available * (p.value || 1)) + '. You earn ' + (p.per100 || 1) + ' point per KES 100 you pay on delivered orders. Use points as a discount below.</div></div>' : '') +
     '<div class="card"><h3>Order from ' + esc(vend) + '</h3><div class="mu">You can also buy from any other supplier. Record that in Stock > Receive.</div>' +
     '<div style="margin-top:8px"><input data-f="oq" id="oq" type="search" placeholder="Search products" value="' + esc(F.oq) + '"></div>' +
     '<div class="chips">' + cats.map(function (c) { return '<button class="chip' + (c === ordCat ? ' on' : '') + '" data-ocat="' + esc(c) + '">' + esc(c) + '</button>'; }).join('') + '</div>' +
     (list.length ? list.map(function (c) {
       var n = ordCart[c.code] || 0;
       return '<div class="kv" style="align-items:center"><span>' + esc(c.name) + '<br><span class="mu">' + kes(c.price) + (c.unit ? ' per ' + esc(c.unit) : '') + (c.pack > 1 ? ' · ' + kes(c.price / c.pack) + ' each' : '') + '</span></span>' +
-        '<span style="display:flex;gap:6px;align-items:center"><button class="q" data-od="-1" data-oc="' + esc(c.code) + '"' + (n ? '' : ' style="opacity:.35"') + '>−</button><input class="qin" type="number" inputmode="numeric" min="0" data-oqty="' + esc(c.code) + '" value="' + n + '" aria-label="Quantity of ' + esc(c.name) + '"><button class="q" data-od="1" data-oc="' + esc(c.code) + '">+</button></span></div>';
-    }).join('') : '<div class="mu" style="margin-top:8px">' + (cata.length ? 'Nothing matches.' : 'The catalogue is empty or still loading. Connect to the internet and try again.') + '</div>') + '</div>' +
+        (orderable ? '<span style="display:flex;gap:6px;align-items:center"><button class="q" data-od="-1" data-oc="' + esc(c.code) + '"' + (n ? '' : ' style="opacity:.35"') + '>−</button><input class="qin" type="number" inputmode="numeric" min="0" data-oqty="' + esc(c.code) + '" value="' + n + '" aria-label="Quantity of ' + esc(c.name) + '"><button class="q" data-od="1" data-oc="' + esc(c.code) + '">+</button></span>' : '') + '</div>';
+    }).join('') : '<div class="mu" style="margin-top:8px">' + (loading ? 'Loading ' + esc(vend) + '’s products…' : cata.length ? 'Nothing matches.' : 'The catalogue is empty or still loading. Connect to the internet and try again.') + '</div>') + '</div>' +
+    supplierCard() +
     (mine ? '<div class="card"><h3>My orders</h3>' + mine + '</div>' : '');
 }
 
@@ -1198,13 +1264,13 @@ function viewToday() {
 /* ----- more: expenses and team ----- */
 function viewMore() {
   var subs = v3() ? [['expenses', 'Expenses'], ['team', 'Team']] : [['team', 'Team']];
-  if (v4()) subs = [['business', 'Business']].concat(isService() ? [['prices', 'Price list']] : [], subs, [['activity', 'Activity'], ['plan', 'Plan']]);
-  if (isRest()) subs = [['menu', 'Menu'], ['tables', 'Tables'], ['business', 'Business'], ['expenses', 'Expenses'], ['team', 'Team'], ['activity', 'Activity'], ['plan', 'Plan']];
+  if (v4()) subs = [['business', 'Business']].concat(isService() ? [['prices', 'Price list']] : [], subs, [['activity', 'Activity'], ['plan', 'Plan'], ['help', 'Help']]);
+  if (isRest()) subs = [['menu', 'Menu'], ['tables', 'Tables'], ['business', 'Business'], ['expenses', 'Expenses'], ['team', 'Team'], ['activity', 'Activity'], ['plan', 'Plan'], ['help', 'Help']];
   if (!v3()) moreSub = 'team';
   if (isRest() && !moreTouched && !restS().menu.length) moreSub = 'menu';
   if (v4() && isService() && !moreTouched && !biz().pin) moreSub = 'business';
   var head = '<div class="chips">' + subs.map(function (s) { return '<button class="chip' + (moreSub === s[0] ? ' on' : '') + '" data-msub="' + s[0] + '">' + s[1] + '</button>'; }).join('') + '</div>';
-  if (moreSub === 'team') viewTeam(head); else if (moreSub === 'business') viewBusiness(head); else if (moreSub === 'prices') viewPriceList(head); else if (moreSub === 'menu') viewMenuAdmin(head); else if (moreSub === 'tables') viewTablesAdmin(head); else if (moreSub === 'plan') viewPlan(head); else if (moreSub === 'activity') viewActivity(head); else viewExpenses(head);
+  if (moreSub === 'team') viewTeam(head); else if (moreSub === 'business') viewBusiness(head); else if (moreSub === 'prices') viewPriceList(head); else if (moreSub === 'menu') viewMenuAdmin(head); else if (moreSub === 'tables') viewTablesAdmin(head); else if (moreSub === 'plan') viewPlan(head); else if (moreSub === 'help') viewHelp(head); else if (moreSub === 'activity') viewActivity(head); else viewExpenses(head);
 }
 
 function viewExpenses(head) {
@@ -1668,6 +1734,22 @@ function planBanner() {
   if (p.daysLeft !== null && p.daysLeft <= 7 && p.id !== 'starter') return '<div class="bn"><span>' + esc(p.name) + ' plan ends in ' + Math.max(0, p.daysLeft) + ' day' + (p.daysLeft === 1 ? '' : 's') + '.</span><button class="ghost" data-goplan="1">Keep it</button></div>';
   return '';
 }
+var HELP = [
+  ['Add many products at once', 'Stock > Upload. Download the Excel template, fill it in (including Opening Stock), and upload it. Your items, prices and opening stock are set in one go. You can fix mistakes later in Stock.'],
+  ['I counted wrong, how do I fix stock?', 'Stock > Count. Type what is really on the shelf. The app records the difference so your books agree with the shelf.'],
+  ['How do I order from a supplier?', 'Order tab. Pick a supplier. If it says Ask to buy, tap it and wait for them to accept. Then choose products and send. When the goods arrive, tap Receive on the order.'],
+  ['A supplier I use is not listed', 'Order tab > Invite a supplier. Type their name, email and phone. They join free and you can order from them once they accept.'],
+  ['A sale was entered wrongly', 'Sales of goods cannot be deleted, so your books stay honest. Put the stock right in Stock > Count. Owners can cancel restaurant bills and invoices. Activity shows who recorded what.'],
+  ['I changed phone', 'Open your shop link on the new phone and tap Use this phone. Your data is safe on the server.'],
+  ['The internet is off', 'Keep selling. Sales are saved on the phone and sent when the internet is back. Restaurant bills need internet.']];
+function viewHelp(head) {
+  var sp = (S && S.plan && S.plan.support) || {}, mc = (S && S.plan && S.plan.contact) || '';
+  var wa = mc ? 'https://wa.me/' + String(mc).replace(/\D/g, '') + '?text=' + encodeURIComponent('Support request from ' + ((S && S.shop) || 'my shop') + ': ') : '';
+  $('main').innerHTML = head + '<div class="card"><h3>Quick answers</h3>' + HELP.map(function (h) { return '<details style="padding:6px 0"><summary><b>' + esc(h[0]) + '</b></summary><div class="mu" style="margin-top:4px">' + esc(h[1]) + '</div></details>'; }).join('') +
+    (sp.manual ? '<div class="row"><a class="ghost" style="text-decoration:none;text-align:center;flex:1" target="_blank" rel="noopener" href="' + esc(sp.manual) + '">Open the full manual (PDF)</a></div>' : '') + '</div>' +
+    '<div class="card"><h3>Need a person to help?</h3><div class="mu">Everything above is free. If you still need someone to help you, a support request costs ' + (sp.fee ? kes(sp.fee) : 'a small fee') + ', paid before we start.</div>' +
+    (wa ? '<div class="row"><a class="go" style="text-decoration:none;text-align:center;flex:1" target="_blank" rel="noopener" href="' + wa + '">Ask for help on WhatsApp</a></div>' : '') + '</div>';
+}
 function viewPlan(head) {
   var p = S.plan || { id: 'standard', name: 'Standard', all: [], limits: {} }, order = ['starter', 'standard', 'pro'];
   var msg = function (id) { return encodeURIComponent('Hello, I would like to ' + (id === p.id ? 'renew' : 'upgrade') + ' ' + ((S.biz && S.biz.name) || S.shop) + ' to the ' + id.charAt(0).toUpperCase() + id.slice(1) + ' plan.'); };
@@ -2009,6 +2091,414 @@ function viewActivity(head) {
     '<p class="mu">The full history is kept in your records Sheet (Audit tab).</p>';
 }
 
+
+/* ================= v8.2: BULK UPLOAD OF ITEMS (Excel or CSV template) ================= */
+var BK = null, bkBusy = false;   // BK = { name, rows:[{line,name,category,price,cost,qty,reorder,barcode,err}], mode }
+Object.assign(F, { bkMode: 'skip' });
+var BK_HEADS = ['Item name *', 'Category', 'Selling price (KES) *', 'Buying cost (KES)', 'Quantity in stock now', 'Reorder level', 'Barcode (optional)'];
+function csvParse(text) {
+  var rows = [], row = [], cur = '', q = false, i = 0;
+  text = String(text || '').replace(/^﻿/, '');
+  var delim = (text.split('\n')[0].split(';').length > text.split('\n')[0].split(',').length) ? ';' : ',';
+  for (; i < text.length; i++) {
+    var c = text[i];
+    if (q) { if (c === '"') { if (text[i + 1] === '"') { cur += '"'; i++; } else q = false; } else cur += c; }
+    else if (c === '"') q = true;
+    else if (c === delim) { row.push(cur); cur = ''; }
+    else if (c === '\n') { row.push(cur); rows.push(row); row = []; cur = ''; }
+    else if (c !== '\r') cur += c;
+  }
+  if (cur !== '' || row.length) { row.push(cur); rows.push(row); }
+  return rows;
+}
+function bkNum(v) { if (v === '' || v === null || v === undefined) return ''; var n = Number(String(v).replace(/[, ]/g, '')); return isNaN(n) ? NaN : n; }
+/** turn a grid (array of rows) into items, matching columns by their headings */
+function bkFromGrid(grid) {
+  var hi = -1, map = {};
+  for (var r = 0; r < Math.min(grid.length, 15); r++) {
+    var m = {};
+    grid[r].forEach(function (h, c) {
+      var t = String(h || '').toLowerCase();
+      if (!t) return;
+      if (/barcode/.test(t)) m.barcode = c;
+      else if (/categ/.test(t)) m.category = c;
+      else if (/reorder|low|warn/.test(t)) m.reorder = c;
+      else if (/sell|price/.test(t)) m.price = c;
+      else if (/cost|buy/.test(t)) m.cost = c;
+      else if (/quant|stock|qty|opening|how many/.test(t)) m.qty = c;
+      else if (/name|item|product|description/.test(t) && m.name === undefined) m.name = c;
+    });
+    if (m.name !== undefined && m.price !== undefined) { hi = r; map = m; break; }
+  }
+  if (hi < 0) return { error: 'We could not find the headings "Item name" and "Selling price". Please use the Duka POS template.' };
+  var rows = [];
+  for (var i = hi + 1; i < grid.length; i++) {
+    var g = grid[i], cell = function (k) { return map[k] === undefined ? '' : (g[map[k]] === undefined || g[map[k]] === null ? '' : g[map[k]]); };
+    var name = String(cell('name')).trim();
+    if (!name && !String(cell('price')).trim() && !String(cell('qty')).trim()) continue;   // empty row
+    var o = { line: i + 1, name: name, category: String(cell('category')).trim(), price: bkNum(cell('price')), cost: bkNum(cell('cost')), qty: bkNum(cell('qty')), reorder: bkNum(cell('reorder')), barcode: String(cell('barcode')).trim(), err: '' };
+    if (!name) o.err = 'item name missing';
+    else if (o.price === '' || isNaN(o.price) || o.price < 0) o.err = 'selling price missing or not a number';
+    else if ((o.cost !== '' && (isNaN(o.cost) || o.cost < 0)) || (o.qty !== '' && (isNaN(o.qty) || o.qty < 0)) || (o.reorder !== '' && (isNaN(o.reorder) || o.reorder < 0))) o.err = 'a quantity, cost or reorder level is not a number';
+    rows.push(o);
+  }
+  var seen = {}; rows.forEach(function (o) { var k = o.name.toLowerCase(); if (!o.err && o.name) { if (seen[k]) o.err = 'listed twice in the file'; seen[k] = 1; } });
+  return { rows: rows };
+}
+function loadSheetJS() {
+  return new Promise(function (res, rej) {
+    if (window.XLSX) return res(window.XLSX);
+    var s = document.createElement('script'); s.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+    s.onload = function () { res(window.XLSX); }; s.onerror = function () { rej(new Error('offline')); }; document.head.appendChild(s);
+  });
+}
+async function bkRead(file) {
+  var name = file.name || 'file';
+  try {
+    var grid;
+    if (/\.csv$|\.txt$/i.test(name)) grid = csvParse(await file.text());
+    else {
+      var X = await loadSheetJS(), wb = X.read(await file.arrayBuffer(), { type: 'array' });
+      var sn = wb.SheetNames.find(function (n) { return /^items$/i.test(n); }) || wb.SheetNames.find(function (n) { return !/example|how/i.test(n); }) || wb.SheetNames[0];
+      grid = X.utils.sheet_to_json(wb.Sheets[sn], { header: 1, raw: false, defval: '' });
+    }
+    var r = bkFromGrid(grid);
+    if (r.error) { BK = null; toast(r.error); render(true); return; }
+    if (!r.rows.length) { BK = null; toast('The file has no items yet'); render(true); return; }
+    BK = { name: name, rows: r.rows, hash: bkHash(JSON.stringify(r.rows)) };
+    render(true);
+  } catch (e) {
+    BK = null; toast(String(e.message) === 'offline' ? 'Reading Excel files needs internet. Or save the file as CSV and upload that.' : 'Could not read that file. Please use the Duka POS template.'); render(true);
+  }
+}
+function bkHash(s) { var h = 5381; for (var i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0; return String(h); }
+function bkExisting(o) { var n = o.name.trim().toLowerCase(); return items().some(function (i) { return i.name.trim().toLowerCase() === n; }); }
+function viewBulk(head) {
+  var h = head + '<div class="card"><h3>Upload your items from Excel</h3><div class="mu">Fill in the template once, upload it, and your items, opening stock and prices are all in. Fix anything later in Stock > Items or by uploading again.</div>' +
+    '<ol class="mu" style="margin:8px 0 0 18px;padding:0"><li>Download the template</li><li>Fill in one item per row</li><li>Choose the file below</li></ol>' +
+    '<div class="row"><a class="ghost" style="text-decoration:none;text-align:center;flex:1" href="Duka-Stock-Template.xlsx" download>Download Excel template</a><button class="ghost" id="bkCsv" style="flex:1">Download CSV template</button></div></div>' +
+    '<div class="card"><h3>Choose your file</h3><input type="file" id="bkFile" accept=".xlsx,.xls,.csv,.txt"></div>';
+  if (BK) {
+    var ok = BK.rows.filter(function (o) { return !o.err; }), bad = BK.rows.filter(function (o) { return o.err; });
+    var ex = ok.filter(bkExisting).length, fresh = ok.length - ex;
+    var seenBefore = false; try { seenBefore = (JSON.parse(localStorage.getItem('bkh_' + KEY) || '[]') || []).indexOf(BK.hash) > -1; } catch (e) {}
+    h += '<div class="card"><h3>Check before you upload</h3><div class="kpis">' + kpi('New items', String(fresh), '', 'pos') + kpi('Already in your shop', String(ex), ex ? 'see choice below' : '') + kpi('Need fixing', String(bad.length), bad.length ? 'will be skipped' : '', bad.length ? 'neg' : '') + '</div>' +
+      (seenBefore ? '<div class="warn">You uploaded this same file before. Uploading again will not create duplicates.</div>' : '') +
+      (bad.length ? '<div class="warn"><b>These rows will be skipped</b><br>' + bad.slice(0, 8).map(function (o) { return 'Row ' + o.line + ': ' + esc(o.name || '(no name)') + ' — ' + esc(o.err); }).join('<br>') + (bad.length > 8 ? '<br>…and ' + (bad.length - 8) + ' more' : '') + '</div>' : '') +
+      (ex ? '<label>' + ex + ' of these items are already in your shop. What should we do?</label><select data-f="bkMode"><option value="skip"' + (F.bkMode === 'skip' ? ' selected' : '') + '>Leave them as they are</option><option value="update"' + (F.bkMode === 'update' ? ' selected' : '') + '>Update their price, cost and reorder level</option><option value="reset"' + (F.bkMode === 'reset' ? ' selected' : '') + '>Update those, and also reset their starting quantity</option></select>' : '') +
+      '<div style="overflow:auto;margin-top:8px"><table class="bktbl"><tr><th style="text-align:left">Item</th><th>Price</th><th>Cost</th><th>Qty</th></tr>' +
+      ok.slice(0, 8).map(function (o) { return '<tr><td>' + esc(o.name) + (bkExisting(o) ? ' <span class="pill">exists</span>' : '') + '</td><td style="text-align:right">' + (o.price === '' ? '' : kes(o.price)) + '</td><td style="text-align:right">' + (o.cost === '' ? '' : kes(o.cost)) + '</td><td style="text-align:right">' + (o.qty === '' ? '' : o.qty) + '</td></tr>'; }).join('') + '</table></div>' +
+      (ok.length > 8 ? '<div class="mu">…and ' + (ok.length - 8) + ' more</div>' : '') +
+      '<div class="row"><button class="ghost" id="bkClear">Cancel</button><button class="go" id="bkGo" style="flex:1"' + (!ok.length || bkBusy ? ' disabled' : '') + '>' + (bkBusy ? 'Uploading…' : 'Upload ' + ok.length + ' item' + (ok.length === 1 ? '' : 's')) + '</button></div></div>';
+  }
+  $('main').innerHTML = h;
+}
+async function bkUpload() {
+  if (!BK || bkBusy) return;
+  if (!navigator.onLine) { toast('You need internet for this'); return; }
+  var ok = BK.rows.filter(function (o) { return !o.err; });
+  if (!ok.length) return;
+  bkBusy = true; render(true);
+  var tot = { created: 0, updated: 0, skipped: 0, bad: 0 };
+  try {
+    for (var i = 0; i < ok.length; i += 200) {
+      var part = ok.slice(i, i + 200).map(function (o) { return { line: o.line, name: o.name, category: o.category, price: o.price, cost: o.cost, qty: o.qty, reorder: o.reorder, barcode: o.barcode }; });
+      var j = await post({ token: KEY, action: 'importItems', mode: F.bkMode, rows: part });
+      if (!j.ok) { toast(j.error || 'Upload failed. Nothing more was sent.'); break; }
+      tot.created += j.created; tot.updated += j.updated; tot.skipped += j.skipped; tot.bad += j.badCount;
+    }
+    await loadState();
+    try { var hs = JSON.parse(localStorage.getItem('bkh_' + KEY) || '[]'); hs.push(BK.hash); localStorage.setItem('bkh_' + KEY, JSON.stringify(hs.slice(-20))); } catch (e) {}
+    toast(tot.created + ' new, ' + tot.updated + ' updated' + (tot.skipped ? ', ' + tot.skipped + ' left as they were' : '') + (tot.bad ? ', ' + tot.bad + ' skipped' : ''));
+    BK = null;
+  } catch (e) { toast('Could not reach the server. Nothing was lost, tap again.'); }
+  bkBusy = false; await refreshLocal(true); render(true);
+}
+document.addEventListener('change', function (e) {
+  if (e.target && e.target.id === 'bkFile' && e.target.files && e.target.files[0]) bkRead(e.target.files[0]);
+});
+document.addEventListener('click', function (e) {
+  var b = e.target.closest('button'); if (!b) return;
+  if (b.id === 'bkGo') bkUpload();
+  else if (b.id === 'bkClear') { BK = null; render(true); }
+  else if (b.id === 'bkCsv') {
+    var csv = '﻿' + BK_HEADS.join(',') + '\r\nMandazi,Snacks,20,12,100,20,\r\n';
+    var a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' })); a.download = 'Duka-Stock-Template.csv'; document.body.appendChild(a); a.click(); a.remove();
+  }
+});
+
+/* ================= v8.2: SHOPS INVITE THEIR OWN SUPPLIERS; SUPPLIERS ACCEPT THE TERMS ================= */
+var VENDOR_TERMS = [
+  ['Who we are', 'Duka POS is a tool that lets shops send orders to suppliers ("vendors") and lets vendors receive and manage those orders. Duka POS is not the seller, buyer or carrier of any goods and is not a party to any sale between a vendor and a shop.'],
+  ['Your goods and prices', 'You promise that the products, prices and units you list are true and up to date, that the goods are lawful, genuine, safe and not expired, and that you will keep prices and availability current. When you confirm an order you promise to deliver it at the price shown, unless you and the shop agree otherwise.'],
+  ['Delivery and payment', 'Delivery, payment and any credit are agreed and settled directly between you and the shop. Duka POS does not collect or hold the shop\'s money and does not guarantee payment. Please keep your own records of what you deliver and what you are paid.'],
+  ['Shops\' information', 'You will see the name and phone number of a shop only to serve its orders. You will not sell or share it, or use it to market to the shop for anything unrelated to the orders, and you will handle it as required by the Data Protection Act, 2019 of Kenya.'],
+  ['Plans and fees', 'You start with a free trial of Vendor Standard. After it ends you move to the free Listed plan unless you pay for a plan. Plan prices are shown in the app and are paid by M-Pesa. Your products and orders are never deleted when a plan ends; only the extra features and limits change.'],
+  ['Our right to act', 'We may hide, pause or remove a vendor who lists false or unlawful goods, ignores confirmed orders, abuses shops, or breaks these terms. Shops that invited you can see you first; we may make you visible to all shops after we have checked your business.'],
+  ['Limits', 'Duka POS is provided "as is". We are not liable for losses from late, wrong, or missing deliveries or payments between you and a shop, or from the app being unavailable, to the extent the law allows. These terms are governed by the laws of Kenya.'],
+  ['Changes', 'We may update these terms. Continuing to use the app after a change means you accept it. The version you accept is recorded with the date.']
+];
+Object.assign(F, { ivName: '', ivEmail: '', ivPhone: '', avName: '', avPhone: '', avArea: '', avCat: '' });
+var invInfo = null, invLoading = false, invBusy = false, invAccept = false, ivOpen = false, ivResult = null, ivBusy = false;
+function termsHtml() { return '<div class="terms">' + VENDOR_TERMS.map(function (t, i) { return '<p><b>' + (i + 1) + '. ' + esc(t[0]) + '.</b> ' + esc(t[1]) + '</p>'; }).join('') + '</div>'; }
+async function loadInvite() {
+  if (invLoading || invInfo) return; invLoading = true;
+  try {
+    var r = await fetch((window.INV_API || API) + '?invite=' + encodeURIComponent(INV)); invInfo = await r.json();
+    if (invInfo && invInfo.ok && !invInfo.done) { F.avName = invInfo.name || ''; F.avPhone = invInfo.phone || ''; }
+  } catch (e) { invInfo = { ok: false, error: 'Could not reach the server. Check your internet and open the link again.' }; }
+  invLoading = false; render(true);
+}
+function viewInvite() {
+  $('nav').innerHTML = ''; $('banner').innerHTML = ''; $('cart').style.display = 'none'; document.body.classList.remove('cartp'); $('main').className = 't-gate';
+  try { $('st').textContent = ''; } catch (e) {}
+  if (!invInfo) { $('main').innerHTML = '<div class="card"><div class="mu">Opening your invitation…</div></div>'; loadInvite(); return; }
+  if (!invInfo.ok) { $('main').innerHTML = '<div class="card lock"><div class="lk">⚠️</div><h3>' + esc(invInfo.error || 'This invitation link is not valid') + '</h3></div>'; return; }
+  if (invInfo.done) { $('main').innerHTML = '<div class="card lock"><div class="lk">✅</div><h3>' + esc(invInfo.name || 'This invitation') + ' has already joined</h3><div class="mu">Open your own vendor link (check your email) to sign in.</div></div>'; return; }
+  $('main').innerHTML = '<div class="card"><h3>' + esc(invInfo.invitedBy) + ' invites you to Duka POS</h3><div class="mu">Take their orders on your phone. You choose your products and prices, and see every shop that orders from you. Free to start: ' + (invInfo.trialDays || 30) + ' days of Vendor Standard, then the free Listed plan.</div></div>' +
+    '<div class="card"><h3>Your business</h3><label>Business name</label><input data-f="avName" value="' + esc(F.avName) + '">' +
+    '<label>Phone (WhatsApp)</label><input data-f="avPhone" type="tel" value="' + esc(F.avPhone) + '">' +
+    '<div class="two"><div><label>Area / town</label><input data-f="avArea" value="' + esc(F.avArea) + '"></div><div><label>What you sell</label><input data-f="avCat" placeholder="e.g. Grains, drinks" value="' + esc(F.avCat) + '"></div></div></div>' +
+    '<div class="card"><h3>Terms</h3>' + termsHtml() + '<label class="chk"><input type="checkbox" id="avTick"' + (invAccept ? ' checked' : '') + '> I have read and accept these terms</label>' +
+    '<div class="row"><button class="go" id="avGo" style="flex:1"' + (invBusy ? ' disabled' : '') + '>' + (invBusy ? 'Joining…' : 'Accept and join') + '</button></div></div>';
+}
+async function inviteAccept() {
+  if (invBusy) return;
+  if (!invAccept) { toast('Please tick the box to accept the terms'); return; }
+  if (!F.avName.trim()) { toast('Type your business name'); return; }
+  if (F.avPhone.replace(/\D/g, '').length < 9) { toast('Type your phone number'); return; }
+  var hadShop = false; try { hadShop = !!localStorage.getItem('k'); } catch (e) {}
+  if (hadShop && !confirm('This phone is already used for a shop. Joining as a supplier here will replace it on this phone. Continue?')) return;
+  invBusy = true; render(true);
+  try {
+    var r = await fetch(window.INV_API || API, { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify({ action: 'vendorAccept', code: INV, accept: true, name: F.avName.trim(), phone: F.avPhone.trim(), area: F.avArea.trim(), category: F.avCat.trim() }) });
+    var j = await r.json();
+    if (!j.ok) { toast(j.error || 'Could not join'); invBusy = false; render(true); return; }
+    try { localStorage.setItem('api', window.INV_API || API); localStorage.setItem('k', j.key); } catch (e) {}
+    location.href = location.pathname;
+  } catch (e) { toast('Could not reach the server. Nothing was lost, tap again.'); invBusy = false; render(true); }
+}
+function inviteMsg(name, code) {
+  var link = location.origin + location.pathname + '?api=' + encodeURIComponent(API) + '&inv=' + code;
+  return 'Habari ' + name + ', I use Duka POS for my shop (' + ((S && S.shop) || '') + ') and I would like to order from you there. Join free and see my orders here: ' + link;
+}
+async function inviteSend() {
+  if (ivBusy) return;
+  if (!F.ivName.trim()) { toast('Type the supplier\'s name'); return; }
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(F.ivEmail.trim())) { toast('Type a correct email address'); return; }
+  if (F.ivPhone.replace(/\D/g, '').length < 9) { toast('Type the supplier\'s phone number'); return; }
+  if (!navigator.onLine) { toast('You need internet for this'); return; }
+  ivBusy = true; render(true);
+  var j = await onlineAction({ action: 'inviteVendor', name: F.ivName.trim(), email: F.ivEmail.trim(), phone: F.ivPhone.trim() }, 'Invitation sent');
+  ivBusy = false;
+  if (j) { ivResult = { name: F.ivName.trim(), phone: F.ivPhone.trim(), existing: !!j.existing, requested: !!j.requested, code: j.code || '', status: j.status }; F.ivName = F.ivEmail = F.ivPhone = ''; ivOpen = false; }
+  render(true);
+}
+/** the "Your suppliers" card on the Order tab */
+function supplierCard() {
+  var inv = (S && S.invites) || [], h = '<div class="card"><h3>Buy from your own supplier</h3><div class="mu">Invite the supplier you already use. They join free, add their products, and you order and receive from them here.</div>';
+  if (ivResult) {
+    var wa = ivResult.code ? 'https://wa.me/' + waNumber(ivResult.phone) + '?text=' + encodeURIComponent(inviteMsg(ivResult.name, ivResult.code)) : '';
+    h += '<div class="ok" style="margin-top:8px"><b>' + (ivResult.existing && ivResult.status === 'Active' ? esc(ivResult.name) + ' is already on Duka POS.' : 'Invitation sent to ' + esc(ivResult.name) + '.') + '</b> ' +
+      (ivResult.existing && ivResult.status === 'Active' ? (ivResult.requested ? 'We asked them to accept your shop. You can order once they accept.' : 'They are in your supplier list now.') : 'We emailed them. You can also send it on WhatsApp.') + (wa ? '<div class="row"><a class="go" style="text-decoration:none;text-align:center;flex:1" target="_blank" rel="noopener" href="' + wa + '">Send on WhatsApp</a></div>' : '') +
+      '<div class="row"><button class="ghost" id="ivDone" style="flex:1">Done</button></div></div>';
+  }
+  if (inv.length) h += '<div style="margin-top:8px">' + inv.map(function (v) {
+    return '<div class="kv"><span>' + esc(v.name) + '<br><span class="mu">Waiting to join</span></span><a class="ghost" style="text-decoration:none;padding:6px 12px" target="_blank" rel="noopener" href="https://wa.me/' + waNumber(v.phone) + '?text=' + encodeURIComponent(inviteMsg(v.name, v.code)) + '">Send again</a></div>'; }).join('') + '</div>';
+  if (ivOpen) h += '<label>Supplier\'s business name</label><input data-f="ivName" value="' + esc(F.ivName) + '">' +
+    '<div class="two"><div><label>Email</label><input data-f="ivEmail" type="email" inputmode="email" value="' + esc(F.ivEmail) + '"></div><div><label>Phone (WhatsApp)</label><input data-f="ivPhone" type="tel" value="' + esc(F.ivPhone) + '"></div></div>' +
+    '<div class="row"><button class="ghost" id="ivCancel">Cancel</button><button class="go" id="ivSend" style="flex:1"' + (ivBusy ? ' disabled' : '') + '>' + (ivBusy ? 'Sending…' : 'Send invitation') + '</button></div>';
+  else h += '<div class="row"><button class="ghost" id="ivOpen" style="flex:1">+ Invite a supplier</button></div>';
+  return h + '</div>';
+}
+document.addEventListener('click', function (e) {
+  var b = e.target.closest('button'); if (!b) return;
+  if (b.id === 'avGo') inviteAccept();
+  else if (b.id === 'cntySave') { if (!F.cnty) { toast('Choose your county'); return; } onlineAction({ action: 'setCounty', county: F.cnty }, 'Saved').then(function () { VC = {}; render(true); }); }
+  else if (b.dataset && b.dataset.reqv) { onlineAction({ action: 'requestVendor', vendor: Number(b.dataset.reqv) }, 'Request sent').then(function () { render(true); }); }
+  else if (b.id === 'ivOpen') { ivOpen = true; ivResult = null; render(true); }
+  else if (b.id === 'ivCancel') { ivOpen = false; render(true); }
+  else if (b.id === 'ivSend') inviteSend();
+  else if (b.id === 'ivDone') { ivResult = null; render(true); }
+});
+document.addEventListener('change', function (e) { if (e.target && e.target.id === 'avTick') invAccept = e.target.checked; else if (e.target && e.target.id === 'vpAll') { vpAll = e.target.checked; render(true); } });
+
+/* ================= v8.2: THE VENDOR'S OWN APP ================= */
+var isVendor = function () { return !!(S && S.mode === 'vendor'); };
+ICON.vprod = ICON.stock; ICON.vord = ICON.order; ICON.vcust = ICON.credit;
+Object.assign(F, { cnty: '', vpName: '', vpCat: '', vpUnit: '', vpPack: '1', vpPrice: '', vpSells: '', vpShow: 'Yes', vpOpen: '', vpPhone: '', vpArea: '', vpCategory: '' });
+var vpEdit = null, vpForm = false, vOrdFilter = 'New', vFormInit = false;
+function vTabs() { return [['vord', 'Orders'], ['vprod', 'Products'], ['vcust', 'Customers'], ['more', 'More']]; }
+function vPlan() { return (S && S.vplan) || { id: 'listed', name: 'Listed', products: 15, ordersPerMonth: 20, customers: false, reports: false, perks: [], all: [] }; }
+async function vPost(obj, okMsg) {
+  if (!navigator.onLine) { toast('You need internet for this'); return null; }
+  try {
+    var j = await post(Object.assign({ token: KEY }, obj));
+    if (!j.ok) { toast(j.error || 'Could not save'); return null; }
+    await loadState(); if (okMsg) toast(okMsg); return j;
+  } catch (e) { toast('Could not reach the server'); return null; }
+}
+function renderVendor() {
+  var ts = vTabs();
+  if (!ts.some(function (t) { return t[0] === tab; })) tab = ts[0][0];
+  $('main').className = 't-' + tab; $('cart').style.display = 'none'; document.body.classList.remove('cartp');
+  $('nav').innerHTML = ts.map(function (t) {
+    var b = t[0] === 'vord' ? ((S.summary && S.summary.newCount) || 0) : 0;
+    return '<button data-t="' + t[0] + '" class="' + (t[0] === tab ? 'on' : '') + '">' + icon(t[0]) + '<span class="nl">' + t[1] + (b ? '<span class="badge">' + b + '</span>' : '') + '</span></button>';
+  }).join('');
+  var p = vPlan(), until = p.until ? new Date(p.until).toLocaleDateString('en-KE', { day: 'numeric', month: 'short' }) : '';
+  $('banner').innerHTML = p.expired ? '<div class="bn"><span>Your plan ended' + (until ? ' on ' + until : '') + '. You are on Listed now. Your products are safe.</span><button class="ghost" data-vplan="1">Renew</button></div>'
+    : (p.daysLeft !== null && p.daysLeft <= 7 && p.id !== 'listed' ? '<div class="bn"><span>' + esc(p.name) + ' ends in ' + Math.max(0, p.daysLeft) + ' day' + (p.daysLeft === 1 ? '' : 's') + '.</span><button class="ghost" data-vplan="1">Renew</button></div>' : '');
+  if (!vFormInit && S.vendorInfo) { vFormInit = true; F.vpPhone = S.vendorInfo.phone || ''; F.vpArea = S.vendorInfo.area || ''; F.vpCategory = S.vendorInfo.category || ''; }
+  if (tab === 'vprod') viewVProducts(); else if (tab === 'vcust') viewVCustomers(); else if (tab === 'more') viewVMore(); else viewVOrders();
+}
+function vWa(phone, msg) { var n = waNumber(phone); return n ? 'https://wa.me/' + n + (msg ? '?text=' + encodeURIComponent(msg) : '') : ''; }
+
+function viewVOrders() {
+  var p = vPlan(), sm = S.summary || {}, all = S.orders || [];
+  var list = all.filter(function (o) { return vOrdFilter === 'All' || o.status === vOrdFilter; });
+  var warn = S.atOrderLimit ? '<div class="warn">You have reached the ' + p.ordersPerMonth + ' orders for this month on the ' + esc(p.name) + ' plan. Shops are told to call you. <a href="#" data-vplan="1">Upgrade</a> to take every order in the app.</div>' : '';
+  var noItems = (S.items || []).filter(function (i) { return i.active; }).length === 0 ? '<div class="warn">Shops cannot see you yet. Add your first product in the Products tab.</div>' : '';
+  var html = noItems + warn + '<div class="kpis">' + kpi('New orders', String(sm.newCount || 0), 'waiting for you', sm.newCount ? 'pos' : '') + kpi('Orders this month', String(sm.monthOrders || 0), p.ordersPerMonth ? 'limit ' + p.ordersPerMonth : 'no limit') +
+    (p.reports ? kpi('Sales this month', kes(sm.monthSales || 0), (sm.customers || 0) + ' shops') : '') + '</div>';
+  html += '<div class="chips">' + ['New', 'Confirmed', 'Delivered', 'Cancelled', 'All'].map(function (f) { return '<button class="chip' + (f === vOrdFilter ? ' on' : '') + '" data-vf="' + f + '">' + f + '</button>'; }).join('') + '</div>';
+  if (!list.length) html += '<div class="card"><div class="mu">' + (all.length ? 'No ' + (vOrdFilter === 'All' ? '' : vOrdFilter.toLowerCase() + ' ') + 'orders.' : 'No orders yet. When a shop orders from you it appears here, and you get an email.') + '</div></div>';
+  list.forEach(function (o) {
+    var wa = vWa(o.phone, 'Hello ' + o.shopName + ', about your order ' + o.id.slice(0, 5).toUpperCase() + ' on Duka POS.');
+    html += '<div class="card"><div class="kv" style="align-items:flex-start"><span><b>' + esc(o.shopName) + '</b> <span class="pill ' + o.status + '">' + o.status + '</span><br><span class="mu">Order ' + esc(o.id.slice(0, 5).toUpperCase()) + ' · ' + new Date(o.t).toLocaleString('en-KE', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) + '</span></span><b>' + kes(o.total) + '</b></div>' +
+      '<div style="margin:8px 0">' + (o.lines || []).map(function (l) { return '<div class="kv"><span>' + esc(l.name) + ' × ' + l.qty + (l.unit ? ' ' + esc(l.unit) : '') + '</span><span class="mu">' + kes(l.qty * l.price) + '</span></div>'; }).join('') + '</div>' +
+      (o.note ? '<div class="mu">Note: ' + esc(o.note) + '</div>' : '') +
+      '<div class="row">' + (wa ? '<a class="ghost" style="text-decoration:none;text-align:center;flex:1" target="_blank" rel="noopener" href="' + wa + '">WhatsApp</a>' : '') +
+      (o.status === 'New' ? '<button class="go" style="flex:1" data-vst="' + esc(o.id) + '|Confirmed">Confirm</button><button class="ghost danger" data-vst="' + esc(o.id) + '|Cancelled">Cancel</button>' : '') +
+      (o.status === 'Confirmed' ? '<button class="go" style="flex:1" data-vst="' + esc(o.id) + '|Delivered">Mark delivered</button><button class="ghost danger" data-vst="' + esc(o.id) + '|Cancelled">Cancel</button>' : '') + '</div></div>';
+  });
+  $('main').innerHTML = html;
+}
+async function vSetStatus(arg) {
+  var p = arg.split('|');
+  if (p[1] === 'Cancelled' && !confirm('Cancel this order? The shop will be told.')) return;
+  if (p[1] === 'Delivered' && !confirm('Mark as delivered? The shop can then add the goods to its stock. This cannot be undone.')) return;
+  var j = await vPost({ action: 'vorderStatus', id: p[0], status: p[1] }, 'Order ' + p[1].toLowerCase());
+  if (j) render(true);
+}
+
+function viewVProducts() {
+  var p = vPlan(), items = (S.items || []).slice().sort(function (a, b) { return a.name.localeCompare(b.name); });
+  var used = items.length, lim = p.products;
+  var cats = items.map(function (i) { return i.category; }).filter(function (v, i, a) { return v && a.indexOf(v) === i; });
+  var form = '';
+  if (vpForm) {
+    form = '<div class="card"><h3>' + (vpEdit ? 'Change product' : 'New product') + '</h3>' +
+      '<label>Product name</label><input data-f="vpName" placeholder="e.g. Rice 25kg bag" value="' + esc(F.vpName) + '">' +
+      '<div class="two"><div><label>Price (KES) for one unit</label><input data-f="vpPrice" type="number" inputmode="decimal" value="' + esc(F.vpPrice) + '"></div>' +
+      '<div><label>Unit you sell in</label><input data-f="vpUnit" list="vunits" placeholder="bag, carton, bale…" value="' + esc(F.vpUnit) + '"><datalist id="vunits"><option value="piece"><option value="bag"><option value="carton"><option value="bale"><option value="dozen"><option value="kg"><option value="litre"><option value="crate"></datalist></div></div>' +
+      '<div class="two"><div><label>Pieces inside one unit</label><input data-f="vpPack" type="number" inputmode="numeric" min="1" value="' + esc(F.vpPack) + '"></div>' +
+      '<div><label>Category</label><input data-f="vpCat" list="vcats" placeholder="e.g. Grains" value="' + esc(F.vpCat) + '"><datalist id="vcats">' + cats.map(function (c) { return '<option value="' + esc(c) + '">'; }).join('') + '</datalist></div></div>' +
+      '<label>Name a shop uses for one piece (so stock matches)</label><input data-f="vpSells" placeholder="e.g. Maize flour 2kg" value="' + esc(F.vpSells) + '">' +
+      '<label>Show to shops?</label><select data-f="vpShow"><option' + (F.vpShow === 'Yes' ? ' selected' : '') + '>Yes</option><option' + (F.vpShow === 'No' ? ' selected' : '') + '>No</option></select>' +
+      '<div class="row"><button class="ghost" id="vpCancel">Cancel</button><button class="go" id="vpSave" style="flex:1">Save product</button></div></div>';
+  }
+  var html = '<div class="card"><div class="kv"><span><b>' + used + '</b> product' + (used === 1 ? '' : 's') + (lim ? ' of ' + lim + ' allowed' : '') + '</span>' + (vpForm ? '' : '<button class="go" id="vpNew">+ New product</button>') + '</div></div>' + form;
+  html += items.length ? '<div class="card">' + items.map(function (i) {
+    return '<div class="kv" style="align-items:center"><span>' + esc(i.name) + (i.active ? '' : ' <span class="pill">Hidden</span>') + '<br><span class="mu">' + esc(i.category) + (i.unit ? ' · per ' + esc(i.unit) : '') + (i.pack > 1 ? ' · ' + i.pack + ' pieces' : '') + '</span></span>' +
+      '<span style="text-align:right"><b>' + kes(i.price) + '</b><br><button class="ghost" data-vpe="' + esc(i.code) + '">Edit</button></span></div>';
+  }).join('') + '</div>' : '<div class="card"><div class="mu">Nothing yet. Tap + New product to list what you sell. Shops see your products in their Order tab.</div></div>';
+  $('main').innerHTML = html;
+}
+function vpOpen(code) {
+  var i = code ? (S.items || []).find(function (x) { return x.code === code; }) : null;
+  vpEdit = i ? i.code : null; vpForm = true;
+  F.vpName = i ? i.name : ''; F.vpCat = i ? i.category : ''; F.vpUnit = i ? i.unit : ''; F.vpPack = String(i ? i.pack : 1); F.vpPrice = i ? String(i.price) : ''; F.vpSells = i ? (i.sellsAs === i.name ? '' : i.sellsAs) : ''; F.vpShow = i && !i.active ? 'No' : 'Yes';
+  render(true);
+}
+async function vpSave() {
+  var name = F.vpName.trim(), price = Number(F.vpPrice);
+  if (!name) { toast('Type the product name'); return; }
+  if (!(price > 0)) { toast('Type the price'); return; }
+  var j = await vPost({ action: 'vsaveItem', code: vpEdit || '', name: name, price: price, unit: F.vpUnit.trim(), pack: Math.max(1, Math.floor(Number(F.vpPack)) || 1), category: F.vpCat.trim() || 'General', sellsAs: F.vpSells.trim() || name, active: F.vpShow !== 'No' }, 'Saved');
+  if (j) { vpForm = false; vpEdit = null; render(true); }
+}
+
+function vRequests() {
+  var rq = (S.requests || []).filter(function (r) { return r.status === 'Requested'; }), bl = (S.requests || []).filter(function (r) { return r.status === 'Declined'; }), h = '';
+  if (rq.length) h += '<div class="card"><h3>Shops asking to buy from you (' + rq.length + ')</h3><div class="mu">A shop can order only after you accept it.</div>' + rq.map(function (r) {
+    return '<div class="kv" style="align-items:center"><span><b>' + esc(r.name) + '</b><br><span class="mu">' + esc(r.county || 'County not set') + (r.phone ? ' · ' + esc(r.phone) : '') + '</span></span>' +
+      '<span style="display:flex;gap:6px"><button class="ghost" data-vresp="' + r.no + '" data-yes="0">Decline</button><button class="go" data-vresp="' + r.no + '" data-yes="1">Accept</button></span></div>'; }).join('') + '</div>';
+  if (bl.length) h += '<div class="card"><h3>Shops you declined</h3>' + bl.map(function (r) {
+    return '<div class="kv" style="align-items:center"><span>' + esc(r.name) + '<br><span class="mu">' + esc(r.county || '') + '</span></span><button class="ghost" data-vresp="' + r.no + '" data-yes="1">Accept now</button></div>'; }).join('') + '</div>';
+  return h;
+}
+function viewVCustomers() {
+  var p = vPlan(), list = S.customers || [], rqh = vRequests();
+  if (!p.customers) {
+    $('main').innerHTML = rqh + '<div class="card lock"><div class="lk">🔒</div><h3>Your customer list</h3><div class="mu">' + (S.customerCount || 0) + ' shop' + (S.customerCount === 1 ? '' : 's') + ' have ordered from you. Names, phone numbers and totals are part of Vendor Standard.</div><div class="row"><button class="go" data-vplan="1" style="flex:1">See plans</button></div></div>' +
+      (list.length ? '<div class="card">' + list.map(function (c) { return '<div class="kv"><span>' + esc(c.name) + '</span><span class="mu">' + c.orders + ' order' + (c.orders === 1 ? '' : 's') + '</span></div>'; }).join('') + '</div>' : '');
+    return;
+  }
+  $('main').innerHTML = rqh + (list.length ? '<div class="card"><h3>Shops that ordered from you</h3>' + list.map(function (c) {
+    var wa = vWa(c.phone, 'Hello ' + c.name + ', this is ' + S.shop + '. ');
+    return '<div class="kv" style="align-items:center"><span><b>' + esc(c.name) + '</b><br><span class="mu">' + c.orders + ' order' + (c.orders === 1 ? '' : 's') + ' · last ' + new Date(c.last).toLocaleDateString('en-KE') + (c.phone ? ' · ' + esc(c.phone) : '') + '</span></span>' +
+      '<span style="text-align:right"><b>' + kes(c.total) + '</b>' + (wa ? '<br><a class="ghost" style="text-decoration:none;padding:4px 10px" target="_blank" rel="noopener" href="' + wa + '">WhatsApp</a>' : '') + '</span></div>';
+  }).join('') + '</div>' : (rqh ? '' : '<div class="card"><div class="mu">No shop has ordered yet.</div></div>'));
+}
+
+function viewVMore() {
+  var p = vPlan(), vi = S.vendorInfo || {}, order = ['listed', 'standard', 'pro'];
+  var msg = function (id) { return encodeURIComponent('Hello, I would like to ' + (id === p.id ? 'renew' : 'upgrade') + ' ' + S.shop + ' to ' + ((p.all || []).find(function (x) { return x.id === id; }) || {}).name + '.'); };
+  var wa = function (id) { return p.contact ? 'https://wa.me/' + String(p.contact).replace(/\D/g, '') + '?text=' + msg(id) : ''; };
+  var invite = 'Hello! I now take orders on Duka POS. If you use Duka POS for your shop, open the Order tab and choose ' + S.shop + '. ' + location.origin + location.pathname.replace(/[^/]*$/, '');
+  $('main').innerHTML = '<div class="hero"><div class="hi">Your plan</div><div class="amt">' + esc(p.name) + '</div><div class="sub">' + (p.until ? (p.expired ? 'Ended ' : 'Until ') + new Date(p.until).toLocaleDateString('en-KE', { day: 'numeric', month: 'long', year: 'numeric' }) + (p.daysLeft > 0 ? ' · ' + p.daysLeft + ' days left' : '') : (p.id === 'listed' ? 'Free, no end date' : '')) + '</div></div>' +
+    '<div class="card"><h3>Your details</h3><div class="mu">Shops see these when they order.</div>' +
+    '<label>Phone (WhatsApp)</label><input data-f="vpPhone" type="tel" value="' + esc(F.vpPhone) + '">' +
+    '<label>Area / town</label><input data-f="vpArea" value="' + esc(F.vpArea) + '">' +
+    '<label>What you sell</label><input data-f="vpCategory" value="' + esc(F.vpCategory) + '">' +
+    '<div class="row"><button class="go" id="vProfSave" style="flex:1">Save details</button></div></div>' +
+    vAreasCard(vi) +
+    '<div class="card"><h3>Bring your shops</h3><div class="mu">Your shops order from you in the Duka POS app. Send them this message.</div><div class="row"><a class="go" style="text-decoration:none;text-align:center;flex:1" target="_blank" rel="noopener" href="https://wa.me/?text=' + encodeURIComponent(invite) + '">Share on WhatsApp</a></div></div>' +
+    (p.all || []).slice().sort(function (a, b) { return order.indexOf(a.id) - order.indexOf(b.id); }).map(function (x) {
+      var cur = x.id === p.id;
+      return '<div class="card plan' + (cur ? ' cur' : '') + '"><div class="ph"><h3>' + esc(x.name) + (cur ? ' <span class="pill Paid">Your plan</span>' : '') + '</h3><b>' + (x.price ? kes(x.price) + '<span class="mu"> / month</span>' : 'Free') + '</b></div>' +
+        '<ul>' + x.perks.map(function (t) { return '<li>' + esc(t) + '</li>'; }).join('') + '</ul>' +
+        (cur ? (x.id !== 'listed' && wa(x.id) ? '<a class="ghost" style="display:block;text-align:center;text-decoration:none" target="_blank" rel="noopener" href="' + wa(x.id) + '">Renew on WhatsApp</a>' : '')
+             : (order.indexOf(x.id) > order.indexOf(p.id) && wa(x.id) ? '<a class="go" style="display:block;text-align:center;text-decoration:none" target="_blank" rel="noopener" href="' + wa(x.id) + '">Upgrade to ' + esc(x.name) + '</a>' : '')) + '</div>';
+    }).join('') + '<p class="mu" style="text-align:center">' + esc(p.note || '') + ' You never lose your products or orders when a plan changes.</p>' +
+    '<div class="row"><button class="ghost" id="syncNow" style="flex:1">Sync now</button></div>';
+}
+var vpAreas = null, vpAll = false;
+function vAreasCard(vi) {
+  if (vpAreas === null) { vpAreas = (vi.areas || []).slice(); vpAll = !!vi.countrywide; }
+  var lim = vi.areaLimit, cs = vi.counties || [];
+  var head = lim === 0 ? 'Your plan covers all of Kenya.' : 'Your plan allows ' + lim + ' count' + (lim === 1 ? 'y' : 'ies') + '. Chosen: ' + vpAreas.length + '.';
+  return '<div class="card"><h3>Where do you deliver?</h3><div class="mu">Shops only see you if their county is on your list. Choose the counties you can reach comfortably. ' + head + '</div>' +
+    (lim === 0 ? '<label class="ck"><input type="checkbox" id="vpAll"' + (vpAll ? ' checked' : '') + '> We deliver all over Kenya (bus or courier)</label>' : '') +
+    (vpAll && lim === 0 ? '' : '<div class="chips" style="flex-wrap:wrap;overflow:visible">' + cs.map(function (c) { return '<button class="chip' + (vpAreas.indexOf(c) > -1 ? ' on' : '') + '" data-vcty="' + esc(c) + '">' + esc(c) + '</button>'; }).join('') + '</div>') +
+    ((!vpAreas.length && !vpAll) ? '<div class="mu amb">Until you choose a county, only shops you invited can see you.</div>' : '') +
+    '<div class="row"><button class="go" id="vAreaSave" style="flex:1">Save delivery areas</button></div></div>';
+}
+async function vSaveAreas() {
+  var j = await vPost({ action: 'vsaveProfile', phone: F.vpPhone.trim(), area: F.vpArea.trim(), category: F.vpCategory.trim(), areas: vpAreas || [], countrywide: vpAll }, 'Saved');
+  if (j) { vpAreas = null; vFormInit = false; render(true); }
+}
+async function vSaveProfile() {
+  var j = await vPost({ action: 'vsaveProfile', phone: F.vpPhone.trim(), area: F.vpArea.trim(), category: F.vpCategory.trim() }, 'Saved');
+  if (j) { vFormInit = false; render(true); }
+}
+document.addEventListener('click', function (e) {
+  if (!isVendor()) return;
+  var b = e.target.closest('button, a[data-vplan]'); if (!b) return;
+  var d = b.dataset;
+  if (d.vplan) { e.preventDefault(); tab = 'more'; render(true); }
+  else if (d.vf) { vOrdFilter = d.vf; render(true); }
+  else if (d.vst) vSetStatus(d.vst);
+  else if (d.vpe) vpOpen(d.vpe);
+  else if (b.id === 'vpNew') vpOpen('');
+  else if (b.id === 'vpCancel') { vpForm = false; vpEdit = null; render(true); }
+  else if (b.id === 'vpSave') vpSave();
+  else if (b.id === 'vProfSave') vSaveProfile();
+  else if (b.id === 'vAreaSave') vSaveAreas();
+  else if (d.vcty) { var i = vpAreas.indexOf(d.vcty); if (i > -1) vpAreas.splice(i, 1); else vpAreas.push(d.vcty); render(true); }
+  else if (d.vresp) vPost({ action: 'vrespond', shop: Number(d.vresp), accept: d.yes === '1' }, d.yes === '1' ? 'Accepted' : 'Declined').then(function () { render(true); });
+});
 
 /* ================= v6: RESTAURANT ================= */
 var isRest = function () { return !!(S && S.mode === 'restaurant'); };
@@ -2468,6 +2958,8 @@ document.addEventListener('click', function (e) {
   else if (d.rm !== undefined) { recLines.splice(Number(d.rm), 1); saveDraft(); render(true); }
   else if (d.edit) openEdit(d.edit);
   else if (d.ocat !== undefined) { ordCat = d.ocat; render(true); }
+  else if (d.vend) pickVendor(d.vend);
+  else if (d.again) { var og = ((S && S.orders) || []).find(function (o) { return o.id === d.again; }), have = curCat().map(function (c) { return c.code; }); if (og) { var added = 0; og.lines.forEach(function (l) { if (have.indexOf(l.code) > -1) { ordCart[l.code] = l.qty; added++; } }); toast(added ? 'Your last order is in the list. Check the amounts.' : 'Those products are no longer available'); render(true); } }
   else if (d.od) {
     var c = d.oc, n = (ordCart[c] || 0) + Number(d.od);
     if (n <= 0) delete ordCart[c]; else ordCart[c] = n;
