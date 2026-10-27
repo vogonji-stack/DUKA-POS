@@ -260,15 +260,17 @@ var m=document.querySelector('meta[name=theme-color]');if(m)m.setAttribute('cont
 /* ---------- shop link: index.html?api=...&k=... (remembered on this phone) ---------- */
 var P = new URLSearchParams(location.search);
 var INV = P.get('inv') || '';          // a supplier opening an invitation link: show the terms page, never touch this phone's own key
-if (P.get('api') && INV) {
-  try { if (!localStorage.getItem('api')) localStorage.setItem('api', P.get('api')); } catch (e) {}
-  window.INV_API = P.get('api'); history.replaceState({}, '', location.pathname);
+/* safety: the app only talks to a Google Apps Script address (a crafted link must not send data elsewhere) */
+var okApi = function (u) { return /^https:\/\/script\.google\.com\/(a\/[A-Za-z0-9.-]+\/)?macros\/s\/[A-Za-z0-9_-]+\/exec$/.test(String(u || '')) || /^http:\/\/mock\.test\/exec$/.test(String(u || '')); };
+if (P.get('api') && !okApi(P.get('api'))) { history.replaceState({}, '', location.pathname); alert('This link is not a valid Duka POS link. Ask the person who sent it for a new one.'); }
+else if (P.get('api') && INV) {
+  window.INV_API = P.get('api'); history.replaceState({}, '', location.pathname);   // used for this page only, never saved
 } else if (P.get('api')) {
   try { localStorage.setItem('api', P.get('api')); localStorage.setItem('k', P.get('k') || ''); if (P.get('adm')) localStorage.setItem('adm', P.get('adm')); } catch (e) {}
   history.replaceState({}, '', location.pathname);
 }
 var API = '', KEY = '', ADM = '', DEV = '';
-try { API = localStorage.getItem('api') || ''; KEY = localStorage.getItem('k') || ''; ADM = localStorage.getItem('adm') || ''; DEV = localStorage.getItem('dev') || ''; } catch (e) {}
+try { API = localStorage.getItem('api') || ''; if (API && !okApi(API)) { API = ''; localStorage.removeItem('api'); } KEY = localStorage.getItem('k') || ''; ADM = localStorage.getItem('adm') || ''; DEV = localStorage.getItem('dev') || ''; } catch (e) {}
 /* this phone's own id: the server ties each link to the phone(s) that confirmed it */
 if (!/^[A-Za-z0-9-]{12,64}$/.test(DEV)) {
   DEV = ((window.crypto && crypto.randomUUID) ? crypto.randomUUID() : 'd' + Date.now().toString(36) + Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2)).replace(/[^A-Za-z0-9-]/g, '').slice(0, 64);
@@ -552,7 +554,14 @@ function softDisc() {
   var ch = $('chg'); if (ch) ch.innerHTML = changeText();
 }
 
+function billsToday() {
+  var start = new Date(); start.setHours(0, 0, 0, 0); var seen = {}, n = (v2() && S.today && S.today.bills) || 0;
+  L.sales.forEach(function (x) { if (v2() && x.synced) return; if (new Date(x.ts) < start) return; seen[x.ts] = 1; });
+  return n + Object.keys(seen).length;
+}
+var salesCap = function () { return (S && S.plan && S.plan.limits && S.plan.limits.salesPerDay) || 0; };
 async function completeSale() {
+  if (salesCap() && billsToday() >= salesCap()) { toast('You have used today\'s ' + salesCap() + ' free sales. Upgrade to keep selling.'); tab = 'more'; moreSub = 'plan'; moreTouched = true; render(true); return; }
   if (pay === 'Credit' && !cust.trim()) { toast('Type the customer name for a credit sale'); return; }
   var codes = Object.keys(cart);
   for (var c of codes) {          // stock may have dropped since the item was added (another phone sold it)
@@ -908,7 +917,8 @@ function viewSell() {
   if (cat === 'All' && !q) list = list.map(function (i, n) { return [i, n]; }).sort(function (a, b) { return ((b[0].sold7 || 0) - (a[0].sold7 || 0)) || (a[1] - b[1]); }).map(function (x) { return x[0]; });   // what sells most comes first
   var chipH = cats.map(function (c) { return '<button class="chip' + (c === cat ? ' on' : '') + '" data-cat="' + esc(c) + '">' + esc(c) + '</button>'; });
   if (low.length) chipH.splice(1, 0, '<button class="chip' + (cat === '__low' ? ' on' : '') + '" data-cat="__low">⚠ Running low ' + low.length + '</button>');
-  var html = lastSaleBar() + '<div style="display:flex;gap:8px"><input id="q" type="search" placeholder="Search item or code" value="' + esc(q) + '"><button class="ghost" id="scanSell" style="white-space:nowrap">▦ Scan</button></div>' +
+  var capBar = salesCap() ? '<div class="' + (billsToday() >= salesCap() ? 'warn' : 'mu') + '" style="margin-bottom:6px">Free plan: ' + Math.min(billsToday(), salesCap()) + ' of ' + salesCap() + ' sales used today.' + (billsToday() >= salesCap() ? ' <button class="chip" data-goplan="1">Upgrade to keep selling</button>' : '') + '</div>' : '';
+  var html = capBar + lastSaleBar() + '<div style="display:flex;gap:8px"><input id="q" type="search" placeholder="Search item or code" value="' + esc(q) + '"><button class="ghost" id="scanSell" style="white-space:nowrap">▦ Scan</button></div>' +
     '<div class="chips">' + chipH.join('') + '</div>' + (wide() ? '<div class="kbhint">Keys: <b>/</b> search · <b>Enter</b> adds the item (scanners too; <b>20*mandazi</b> adds 20) · <b>F4</b> complete sale · <b>Esc</b> clear</div>' : '') +
     '<div class="grid">' + list.map(function (i) {
       var s = stockOf(i), cls = s <= 0 ? 'out' : (s <= i.reorder ? 'low' : '');
@@ -987,7 +997,7 @@ function renderCart() {
 /* ----- stock ----- */
 function viewStock() {
   if (!v2()) { viewReceive(''); return; }
-  var subs = [['receive', 'Receive']].concat(v4() ? [['import', 'Import']] : [], [['bulk', 'Upload'], ['items', 'Items'], ['count', 'Count'], ['aging', 'Aging'], ['expiry', 'Expiry']]);
+  var subs = [['receive', 'Receive']].concat(v4() && S.plan && S.plan.limits && S.plan.limits.trade ? [['import', 'Shipments']] : [], [['bulk', 'Excel upload'], ['items', 'Items'], ['count', 'Count'], ['aging', 'Aging'], ['expiry', 'Expiry']]);
   var head = '<div class="chips">' + subs.map(function (s) {
     return '<button class="chip' + (stockSub === s[0] ? ' on' : '') + '" data-sub="' + s[0] + '">' + s[1] + '</button>';
   }).join('') + '</div>';
@@ -1220,6 +1230,8 @@ function viewToday() {
   var html = '<div class="hero"><div class="hi">' + greet() + (v2() && S.role !== 'owner' ? ', ' + esc(S.who) : '') + '</div>' +
     '<div class="amt">' + kes(t.sales) + '</div><div class="sub">' + (owner ? 'Shop sales today · all phones' : 'My sales today') + '</div>' +
     (owner ? '<div class="sub" style="margin-top:6px">Profit ≈ ' + kes(t.profit) + (v3() ? ' · after expenses ' + kes(net) : '') + '</div>' : '') + '</div>';
+  if (owner && isRest() && !restS().menu.length) html += '<div class="card"><h3>Start here</h3><div class="mu">Set up your restaurant in three steps: add ingredients in Stock, name your tables, then add your dishes.</div><div class="row"><button class="go" data-msubgo="menu" style="flex:1">Add my dishes</button></div></div>';
+  else if (owner && !isService() && !isRest() && !items().length) html += '<div class="card"><h3>Start here</h3><div class="mu">Add your products. The fastest way is the Excel template: fill it once, upload it, and your stock and prices are ready.</div><div class="row"><button class="go" data-ssubgo="bulk" style="flex:1">Upload my products</button><button class="ghost" data-ssubgo="items" style="flex:1">Add one by one</button></div></div>';
   if (isRest()) html += restTodayCard();
   var lowL = lowItems();
   if (owner && lowL.length) html += '<div class="card"><h3 class="amb">Running low (' + lowL.length + ')</h3>' + lowL.slice(0, 8).map(function (x) {
@@ -1415,7 +1427,7 @@ function invoiceDoc(inv) {
     (inv.note ? '<p>' + esc(inv.note) + '</p>' : '') +
     (b.terms ? '<p class="terms"><b>Payment details</b><br>' + esc(b.terms).replace(/\n/g, '<br>') + '</p>' : '') +
     (inv.etimsRef ? '<p class="terms">KRA eTIMS reference: ' + esc(inv.etimsRef) + '</p>' : '') +
-    '<p class="foot">Thank you for your business.</p></div>';
+    '<p class="foot">Thank you for your business.</p>' + brandLine() + '</div>';
 }
 function receiptDoc(s) {
   var b = biz(), paidTxt = s.given > 0 ? '<tr><td>Cash received</td><td class="r">' + money2(s.given) + '</td></tr>' + (s.given >= s.total ? '<tr><td>Change</td><td class="r">' + money2(s.given - s.total) + '</td></tr>' : '') : '';
@@ -1424,7 +1436,7 @@ function receiptDoc(s) {
     '<table class="lines"><tbody>' + s.lines.map(function (l) { return '<tr><td>' + esc(l.name) + '<br><span class="mu">' + l.qty + ' × ' + money2(l.price) + '</span></td><td class="r">' + money2(l.qty * l.price) + '</td></tr>'; }).join('') + '</tbody></table>' +
     '<table class="tot">' + (s.disc > 0 ? '<tr><td>Discount</td><td class="r">−' + money2(s.disc) + '</td></tr>' : '') + '<tr class="g"><td>Total</td><td class="r">' + money2(s.total) + '</td></tr><tr><td>Paid by</td><td class="r">' + esc(s.pay) + '</td></tr>' + paidTxt +
     (s.cust ? '<tr><td>Customer</td><td class="r">' + esc(s.cust) + '</td></tr>' : '') + '</table>' +
-    (b.taxStatus === 'vat' && b.vat ? '<p class="terms">Prices include VAT ' + b.vat + '%.</p>' : '') + '<p class="foot">Thank you, karibu tena!</p></div>';
+    (b.taxStatus === 'vat' && b.vat ? '<p class="terms">Prices include VAT ' + b.vat + '%.</p>' : '') + '<p class="foot">Thank you, karibu tena!</p>' + brandLine() + '</div>';
 }
 function receiptText(s) {
   var b = biz(), shop = b.name || (S && S.shop) || 'Receipt';
@@ -1433,6 +1445,7 @@ function receiptText(s) {
     (s.disc > 0 ? '\nDiscount −' + money2(s.disc) : '') + '\n\n*TOTAL ' + money2(s.total) + '*\nPaid by ' + s.pay + (s.given > s.total ? '\nChange ' + money2(s.given - s.total) : '') + '\n\nThank you, karibu tena!';
 }
 var paperSize = 'p80'; try { paperSize = localStorage.getItem('paper') || 'p80'; } catch (e) {}
+var brandLine = function () { return (S && S.plan && S.plan.limits && S.plan.limits.brand) ? '<p class="foot" style="opacity:.55;font-size:10px">Made with Duka POS</p>' : ''; };
 function openReceipt(sale) {
   if (!sale) return;
   $('modal').innerHTML = '<div class="modal" id="rcptWrap"><div class="mbox"><div style="display:flex;justify-content:space-between;align-items:center"><h3>Receipt</h3><button class="ghost" data-mclose="1">Close</button></div>' +
@@ -1734,22 +1747,63 @@ function planBanner() {
   if (p.daysLeft !== null && p.daysLeft <= 7 && p.id !== 'starter') return '<div class="bn"><span>' + esc(p.name) + ' plan ends in ' + Math.max(0, p.daysLeft) + ' day' + (p.daysLeft === 1 ? '' : 's') + '.</span><button class="ghost" data-goplan="1">Keep it</button></div>';
   return '';
 }
-var HELP = [
-  ['Add many products at once', 'Stock > Upload. Download the Excel template, fill it in (including Opening Stock), and upload it. Your items, prices and opening stock are set in one go. You can fix mistakes later in Stock.'],
-  ['I counted wrong, how do I fix stock?', 'Stock > Count. Type what is really on the shelf. The app records the difference so your books agree with the shelf.'],
-  ['How do I order from a supplier?', 'Order tab. Pick a supplier. If it says Ask to buy, tap it and wait for them to accept. Then choose products and send. When the goods arrive, tap Receive on the order.'],
-  ['A supplier I use is not listed', 'Order tab > Invite a supplier. Type their name, email and phone. They join free and you can order from them once they accept.'],
-  ['A sale was entered wrongly', 'Sales of goods cannot be deleted, so your books stay honest. Put the stock right in Stock > Count. Owners can cancel restaurant bills and invoices. Activity shows who recorded what.'],
-  ['I changed phone', 'Open your shop link on the new phone and tap Use this phone. Your data is safe on the server.'],
-  ['The internet is off', 'Keep selling. Sales are saved on the phone and sent when the internet is back. Restaurant bills need internet.']];
-function viewHelp(head) {
-  var sp = (S && S.plan && S.plan.support) || {}, mc = (S && S.plan && S.plan.contact) || '';
-  var wa = mc ? 'https://wa.me/' + String(mc).replace(/\D/g, '') + '?text=' + encodeURIComponent('Support request from ' + ((S && S.shop) || 'my shop') + ': ') : '';
-  $('main').innerHTML = head + '<div class="card"><h3>Quick answers</h3>' + HELP.map(function (h) { return '<details style="padding:6px 0"><summary><b>' + esc(h[0]) + '</b></summary><div class="mu" style="margin-top:4px">' + esc(h[1]) + '</div></details>'; }).join('') +
-    (sp.manual ? '<div class="row"><a class="ghost" style="text-decoration:none;text-align:center;flex:1" target="_blank" rel="noopener" href="' + esc(sp.manual) + '">Open the full manual (PDF)</a></div>' : '') + '</div>' +
+var HELP = {
+  start: {
+    goods: ['Upload your products: Stock > Upload (Excel template, with opening stock).', 'Sell: tap an item, type the quantity, choose Cash, M-Pesa or Credit.', 'Every evening: Today > Count the till and close the day.', 'Order stock from suppliers in the Order tab.'],
+    service: ['Add your details: More > Business (name, KRA PIN, payment details).', 'Add your services and prices: More > Price list.', 'Make an invoice, send it on WhatsApp, record payments as they come.', 'Check who owes you in Credit and remind them on WhatsApp.'],
+    rest: ['Add ingredients in Stock, tables in More > Tables, dishes in More > Menu.', 'Open a table, tap dishes, Send to kitchen.', 'Kitchen taps Ready, the waiter taps Served, then Take payment.', 'Every evening: Today > Count the till and close the day.']
+  },
+  common: [
+    ['I changed phone', 'Open your shop link on the new phone and tap Use this phone. Your records are safe on the server.'],
+    ['The internet is off', 'Keep working. What you record is saved on the phone and sent when the internet is back.'],
+    ['How do I add a cashier?', 'More > Team. Each cashier gets their own link that works on one phone. Cashier seats are a paid extra.'],
+    ['I want to change my plan', 'More > Plan shows what each plan gives. Tap Upgrade and message us on WhatsApp. Your records are never lost when a plan changes.']
+  ],
+  goods: [
+    ['Add many products at once', 'Stock > Upload. Download the Excel template, fill it in (including Opening Stock), upload it. Items, prices and opening stock are set in one go.'],
+    ['I counted the shelf and it is different', 'Stock > Count. Type what is really there. The app records the difference.'],
+    ['A sale was entered wrongly', 'Sales of goods cannot be deleted, so your books stay honest. Put the stock right in Stock > Count. Activity shows who recorded what.'],
+    ['A customer returned goods', 'Stock > Count > Customer return puts the stock back and records it.'],
+    ['How do I order from a supplier?', 'Order tab. Choose your county once, pick a supplier, tap Ask to buy if asked, then choose products and send. When goods arrive tap Receive on the order.'],
+    ['My supplier is not listed', 'Order tab > Invite a supplier: their name, email and phone. They join free; you can order once they accept.'],
+    ['Who owes me money?', 'Credit tab. Tap Remind on WhatsApp next to a customer.']
+  ],
+  service: [
+    ['How do I make an invoice?', 'Invoices (or Sell) > New invoice. Choose or type the client, add services, tap Save, then Send on WhatsApp or Print.'],
+    ['A client paid part of an invoice', 'Open the invoice, tap Record payment, type the amount and how they paid. The balance updates.'],
+    ['I made a mistake on an invoice', 'Owners can cancel an invoice and make a new one. Cancelled invoices stay on record.'],
+    ['Where do I put my KRA PIN and payment details?', 'More > Business. They appear on every invoice.'],
+    ['Charge in dollars or euros', 'Pro plan only. Choose the currency on the invoice; the exchange rate is stored with it.']
+  ],
+  rest: [
+    ['Add a dish with a recipe', 'More > Menu > New dish. Add the ingredients for ONE plate. When the dish is sold, the ingredients leave stock.'],
+    ['A dish was cancelled', 'Tap the cross next to the dish and give a reason. If it was already made, the ingredients are written off and it is listed in the menu report.'],
+    ['Split a bill', 'Take payment: add rows for Cash, M-Pesa or Credit. The line under the rows says Matches the bill when you can confirm.'],
+    ['The kitchen screen', 'Open Kitchen on the kitchen phone. Tap Ready as dishes leave. Waiting 15 minutes turns the card red. Needs the Standard plan.'],
+    ['Which dishes make money?', 'Reports > Menu: Stars, Plowhorses, Puzzles and Dogs. Raise the price of a Plowhorse, promote a Puzzle, drop a Dog. Needs Standard.'],
+    ['The internet drops during service', 'Restaurant bills need internet. Tap Print order to print a kitchen slip and carry on; enter the bill when it is back.']
+  ],
+  vendor: [
+    ['Add my products', 'Products tab > New product. Type the price of ONE pack (for example a carton) and how many pieces are inside.'],
+    ['A shop asked to buy from me', 'Customers tab. Tap Accept or Decline. A shop can order only after you accept. You can block a shop later.'],
+    ['An order arrived', 'Orders tab. Tap Confirm when you agree, Delivered when it is delivered. Message the shop on WhatsApp to arrange payment.'],
+    ['Where do I deliver?', 'More > Where do you deliver? Choose your counties. Shops in other counties will not see you.'],
+    ['Upgrade my plan', 'More shows the plans. Tap Upgrade and message us on WhatsApp. Your products and orders are never lost.']
+  ]
+};
+function helpKind() { return isVendor() ? 'vendor' : (isRest() ? 'rest' : (isService() ? 'service' : 'goods')); }
+function helpBlock() {
+  var k = helpKind(), sp = (isVendor() ? (S.vplan && S.vplan.support) : (S && S.plan && S.plan.support)) || {}, mc = (isVendor() ? (S.vplan && S.vplan.contact) : (S && S.plan && S.plan.contact)) || '';
+  var wa = mc ? 'https://wa.me/' + String(mc).replace(/\D/g, '') + '?text=' + encodeURIComponent('Support request from ' + ((S && S.shop) || 'my business') + ': ') : '';
+  var mlink = (sp.manuals || {})[k === 'rest' ? 'restaurant' : k] || '';
+  var qa = (HELP[k] || []).concat(k === 'vendor' ? [] : HELP.common);
+  var start = HELP.start[k] ? '<div class="card"><h3>Start here</h3><ol style="margin:6px 0 0 18px;padding:0">' + HELP.start[k].map(function (t) { return '<li style="margin:4px 0">' + esc(t) + '</li>'; }).join('') + '</ol></div>' : '';
+  return start + '<div class="card"><h3>Quick answers</h3>' + qa.map(function (h) { return '<details style="padding:6px 0"><summary><b>' + esc(h[0]) + '</b></summary><div class="mu" style="margin-top:4px">' + esc(h[1]) + '</div></details>'; }).join('') +
+    (mlink ? '<div class="row"><a class="ghost" style="text-decoration:none;text-align:center;flex:1" target="_blank" rel="noopener" href="' + esc(mlink) + '">Open the manual for your business (PDF)</a></div>' : '') + '</div>' +
     '<div class="card"><h3>Need a person to help?</h3><div class="mu">Everything above is free. If you still need someone to help you, a support request costs ' + (sp.fee ? kes(sp.fee) : 'a small fee') + ', paid before we start.</div>' +
     (wa ? '<div class="row"><a class="go" style="text-decoration:none;text-align:center;flex:1" target="_blank" rel="noopener" href="' + wa + '">Ask for help on WhatsApp</a></div>' : '') + '</div>';
 }
+function viewHelp(head) { $('main').innerHTML = head + helpBlock(); }
 function viewPlan(head) {
   var p = S.plan || { id: 'standard', name: 'Standard', all: [], limits: {} }, order = ['starter', 'standard', 'pro'];
   var msg = function (id) { return encodeURIComponent('Hello, I would like to ' + (id === p.id ? 'renew' : 'upgrade') + ' ' + ((S.biz && S.biz.name) || S.shop) + ' to the ' + id.charAt(0).toUpperCase() + id.slice(1) + ' plan.'); };
@@ -1762,8 +1816,8 @@ function viewPlan(head) {
       'Manage them in More › Team.</div></div>' : '') +
     (p.all || []).slice().sort(function (a, b) { return order.indexOf(a.id) - order.indexOf(b.id); }).map(function (x) {
       var cur = x.id === p.id;
-      return '<div class="card plan' + (cur ? ' cur' : '') + '"><div class="ph"><h3>' + esc(x.name) + (cur ? ' <span class="pill Paid">Your plan</span>' : '') + '</h3><b>' + (x.price ? kes(x.price) + '<span class="mu"> / month</span>' : 'Free') + '</b></div>' +
-        '<ul>' + x.perks.map(function (t) { return '<li>' + esc(t) + '</li>'; }).join('') + '</ul>' +
+      return '<div class="card plan' + (cur ? ' cur' : '') + '"><div class="ph"><h3>' + esc(x.name) + (cur ? ' <span class="pill Paid">Your plan</span>' : '') + '</h3><b>' + (x.price ? kes(x.price) + '<span class="mu"> / month</span>' : 'Free') + '</b></div>' + (x.yearly ? '<div class="mu" style="margin:-4px 0 6px">Or ' + kes(x.yearly) + ' for a whole year (2 months free)</div>' : '') +
+        '<ul>' + x.perks.concat((x.by || {})[isRest() ? 'rest' : (isService() ? 'service' : 'goods')] || []).map(function (t) { return '<li>' + esc(t) + '</li>'; }).join('') + '</ul>' +
         (cur ? (x.id !== 'starter' ? (wa(x.id) ? '<a class="ghost" style="display:block;text-align:center;text-decoration:none" target="_blank" rel="noopener" href="' + wa(x.id) + '">Renew on WhatsApp</a>' : '') : '')
              : (order.indexOf(x.id) > order.indexOf(p.id) && wa(x.id) ? '<a class="go" style="display:block;text-align:center;text-decoration:none" target="_blank" rel="noopener" href="' + wa(x.id) + '">Upgrade to ' + esc(x.name) + '</a>' : '')) + '</div>';
     }).join('') +
@@ -2199,17 +2253,17 @@ async function bkUpload() {
   var ok = BK.rows.filter(function (o) { return !o.err; });
   if (!ok.length) return;
   bkBusy = true; render(true);
-  var tot = { created: 0, updated: 0, skipped: 0, bad: 0 };
+  var tot = { created: 0, updated: 0, skipped: 0, bad: 0, cap: 0, capN: 0 };
   try {
     for (var i = 0; i < ok.length; i += 200) {
       var part = ok.slice(i, i + 200).map(function (o) { return { line: o.line, name: o.name, category: o.category, price: o.price, cost: o.cost, qty: o.qty, reorder: o.reorder, barcode: o.barcode }; });
       var j = await post({ token: KEY, action: 'importItems', mode: F.bkMode, rows: part });
       if (!j.ok) { toast(j.error || 'Upload failed. Nothing more was sent.'); break; }
-      tot.created += j.created; tot.updated += j.updated; tot.skipped += j.skipped; tot.bad += j.badCount;
+      tot.created += j.created; tot.updated += j.updated; tot.skipped += j.skipped; tot.bad += j.badCount; tot.capN += j.capHit || 0; tot.cap = j.cap || tot.cap;
     }
     await loadState();
     try { var hs = JSON.parse(localStorage.getItem('bkh_' + KEY) || '[]'); hs.push(BK.hash); localStorage.setItem('bkh_' + KEY, JSON.stringify(hs.slice(-20))); } catch (e) {}
-    toast(tot.created + ' new, ' + tot.updated + ' updated' + (tot.skipped ? ', ' + tot.skipped + ' left as they were' : '') + (tot.bad ? ', ' + tot.bad + ' skipped' : ''));
+    toast(tot.created + ' new, ' + tot.updated + ' updated' + (tot.skipped ? ', ' + tot.skipped + ' left as they were' : '') + (tot.bad ? ', ' + tot.bad + ' skipped' : '') + (tot.capN ? '. ' + tot.capN + ' not added: the free plan holds ' + tot.cap + ' products' : ''));
     BK = null;
   } catch (e) { toast('Could not reach the server. Nothing was lost, tap again.'); }
   bkBusy = false; await refreshLocal(true); render(true);
@@ -2462,7 +2516,7 @@ function viewVMore() {
         (cur ? (x.id !== 'listed' && wa(x.id) ? '<a class="ghost" style="display:block;text-align:center;text-decoration:none" target="_blank" rel="noopener" href="' + wa(x.id) + '">Renew on WhatsApp</a>' : '')
              : (order.indexOf(x.id) > order.indexOf(p.id) && wa(x.id) ? '<a class="go" style="display:block;text-align:center;text-decoration:none" target="_blank" rel="noopener" href="' + wa(x.id) + '">Upgrade to ' + esc(x.name) + '</a>' : '')) + '</div>';
     }).join('') + '<p class="mu" style="text-align:center">' + esc(p.note || '') + ' You never lose your products or orders when a plan changes.</p>' +
-    '<div class="row"><button class="ghost" id="syncNow" style="flex:1">Sync now</button></div>';
+    helpBlock() + '<div class="row"><button class="ghost" id="syncNow" style="flex:1">Sync now</button></div>';
 }
 var vpAreas = null, vpAll = false;
 function vAreasCard(vi) {
@@ -2959,6 +3013,8 @@ document.addEventListener('click', function (e) {
   else if (d.edit) openEdit(d.edit);
   else if (d.ocat !== undefined) { ordCat = d.ocat; render(true); }
   else if (d.vend) pickVendor(d.vend);
+  else if (d.msubgo) { tab = 'more'; moreSub = d.msubgo; moreTouched = true; render(true); window.scrollTo(0, 0); }
+  else if (d.ssubgo) { tab = 'stock'; stockSub = d.ssubgo; editCode = null; newItemOpen = d.ssubgo === 'items'; render(true); window.scrollTo(0, 0); }
   else if (d.again) { var og = ((S && S.orders) || []).find(function (o) { return o.id === d.again; }), have = curCat().map(function (c) { return c.code; }); if (og) { var added = 0; og.lines.forEach(function (l) { if (have.indexOf(l.code) > -1) { ordCart[l.code] = l.qty; added++; } }); toast(added ? 'Your last order is in the list. Check the amounts.' : 'Those products are no longer available'); render(true); } }
   else if (d.od) {
     var c = d.oc, n = (ordCart[c] || 0) + Number(d.od);
